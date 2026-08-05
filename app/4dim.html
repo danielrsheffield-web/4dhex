@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hex Game</title>
+    <style>
+        * {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+.page {
+  display: flex;
+  min-height: 100vh;
+}
+.sidebar {
+  width: 260px;           /* fixed sidebar width */
+  flex-shrink: 0;         /* don't squish when board is wide */
+  background: #565656;
+  color: #eee;
+  padding: 16px;
+  overflow-y: auto;       /* scroll if menu is tall */
+  border-right: 1px solid #333;
+}
+.main-content {
+  flex: 1;                /* take remaining space */
+  padding: 16px;
+  overflow: auto;         /* scroll board area if needed */
+}
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+.sidebar section {
+  margin-bottom: 20px;
+}
+.sidebar label {
+  display: block;
+  margin-bottom: 4px;
+}
+.sidebar input[type="text"] {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.sidebar button,
+.sidebar input[type="submit"] {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+      :root {
+        --hex-size: 45px;
+        --board-hex-size: 4;
+        --stagger: 200px;
+        }
+
+      .hex-grid-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        margin: 4px 0;
+      }
+
+      .hex-grid-row{
+        display: flex;
+        gap: -20px;
+      }
+
+      .hex-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        margin: 10px 0;
+      }
+      .hex-row {
+        display: flex;
+        gap: 1px;
+      }
+
+
+      .hex-row + .hex-row {
+          margin-top: -10px;   /* pull this row up — tune number */
+    }
+
+    .hex-grid-row + .hex-grid-row {
+        margin-top: 11px
+    }
+
+      .hex-btn {
+        width: var(--hex-size);
+        height: calc(var(--hex-size) * .9333);
+        clip-path: polygon(75% 0%, 25% 0%, 0% 50%, 25% 100%, 75% 100%, 100% 50%);
+        border: none;
+        cursor: pointer;
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .hex-btn:disabled {
+        cursor: default;
+      }
+      .player-0 {
+        background-color: #e0e0e0;
+      }
+      .player-1 {
+        background-color: #0f72e2;
+        color: white;
+      }
+      .player--1 {
+        background-color: #d20d0d;
+        color: white;
+      }
+      .marked{
+        background-color: #f6ed01;
+        color: #f6ed01
+      }
+      .hex-btn.highlight-1 {
+        background-color: #b1d2f9;
+    }
+    .hex-btn.highlight--1 {
+        background-color: #f9b8b1;
+    }
+    .hex-btn.textlight-1 {
+        color: #0f72e2;
+    }
+    .hex-btn.textlight--1 {
+        color: #d20d0d;
+    }
+    .hex-btn.text-marked {
+        color: #f6ed01;
+    }
+    </style>
+    <script>
+      let userId = localStorage.getItem("userId");
+      let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
+      let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
+      let marking = JSON.parse(localStorage.getItem("marking") || "false");
+      let gameOver = false;
+      let buttonArray = [];
+      let localPlayer = 0;
+    
+      function render2dHexGrid(m, f, cells, faceDiv) {
+        faceButtonArray = [[0]*cells.length]*cells.length;
+        const grid = document.getElementById("hexGrid");
+        for (let i = 0; i < cells.length; i++) {
+            const rowDiv = document.createElement("div");
+            rowDiv.className = "hex-row";
+            rowDiv.style.marginLeft = (cells.length - 1 - i) * 21 + "px";
+            for (let j = 0; j <= i; j++) {  
+            const btn = document.createElement("button");
+            btn.className = "hex-btn player-" + cells[i - j][j];
+            btn.textContent = cells[i - j][j] === 0 ? "" : "●";
+            btn.disabled = gameOver;
+            faceButtonArray[i - j][j] = btn;
+            if (player === 0){
+            btn.onclick = () => playAt(btn,[m, f, i - j, j]);
+          }else{
+            btn.onclick = () => mark(btn, [m, f, i - j, j]);
+          }
+            btn.onmouseenter = () => renderAdj([m, f, i - j, j], true);
+            btn.onmouseleave = () => renderAdj([m, f, i - j, j], false);
+            faceButtonArray[i - j][j].push(btn);
+            rowDiv.appendChild(btn);
+            }
+            faceDiv.appendChild(rowDiv);
+        }
+        return faceButtonArray;
+      }
+
+      function render4dHexGrid(cells) {
+        clearEdges();
+        buttonArray = [];
+        const grid = document.getElementById("hexGrid");
+        grid.innerHTML = "";
+        grid.className = "hex-grid-container";
+        let m = cells.length - 1;
+        while (m >= 0) {
+            megaFaceButtonArray = [];
+            megaFaceDiv = document.createElement("div");
+            megaFaceDiv.className = "hex-grid-row";
+            megaFaceDiv.style.marginLeft = m * 55 * cells.length + "px";
+            grid.appendChild(megaFaceDiv);
+            f = cells[m].length - 1;
+            while (f >= 0) {
+                faceDiv = document.createElement("div");
+                faceDiv.className = "hex-grid";
+                megaFaceDiv.appendChild(faceDiv);
+                faceButtonArray = [];
+                render2dHexGrid(m, f, cells[m][f], faceDiv);
+                megaFaceButtonArray.push(faceButtonArray);
+                f--;
+            }
+            megaFaceButtonArray.reverse();
+            buttonArray.push(megaFaceButtonArray);
+            m--;
+        }
+        buttonArray.reverse();
+
+        for (let i = 0; i < markedCoords.length; i++) {
+        markedCoord = markedCoords[i];
+        subspace = buttonArray;
+        for (let j = 0; j < markedCoord.length; j++) {
+            subspace = subspace[markedCoord[j]];
+        }
+        if (subspace.classList.contains("player-1") || subspace.classList.contains("player--1")){
+            subspace.classList.add("text-marked");
+        }
+        else{
+            subspace.className = "hex-btn marked";
+            subspace.textContent = "●";
+        }
+        }
+    }
+
+      async function playAt(btn, coords) {
+        if (marking) {
+          mark(btn, coords);
+          return;
+        }
+
+        if (gameOver || !userId) return;
+
+        const response = await fetch("/play4d", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ coords: coords, user_id: userId, coordOrder: coordOrder }),
+        });
+
+        if (!response.ok) {
+          document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+          return;
+        }
+
+        const data = await response.json();
+        render4dHexGrid(data.cells);
+        if (data.player === 1){
+          localPlayer = 1;
+          document.getElementById("player").innerHTML = "Blue";
+          const sidebar = document.querySelector(".sidebar");
+          sidebar.style.setProperty("background-color", "#0f72e2");
+        }
+        else{
+          localPlayer = -1;
+          document.getElementById("player").innerHTML = "Red";
+          const sidebar = document.querySelector(".sidebar");
+          sidebar.style.setProperty("background-color", "#d20d0d");
+        }
+
+        if (data.victory) {
+          gameOver = true;
+          document.getElementById("winner").innerHTML = "Player " + (-data.player) + " has won!";
+        }
+      }
+
+      async function mark(btn, coords){
+        if (!marking) {return;}
+        for (let i = 0; i < markedCoords.length; i++) {
+            if (markedCoords[i][0] === coords[0] && markedCoords[i][1] === coords[1] && markedCoords[i][2] === coords[2] && markedCoords[i][3] === coords[3]) {
+              markedCoords.splice(i, 1);
+              localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+              const response = await fetch("/getBoard4d", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: userId, coordOrder: coordOrder, markedCoords: markedCoords }),
+              });
+            if (!response.ok) {
+            document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+            return;
+            }
+            const data = await response.json();
+            render4dHexGrid(data.board);
+            return;
+          }
+        }
+        markedCoords.push(coords);
+        localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+        const response = await fetch("/getBoard4d", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: userId, coordOrder: coordOrder, markedCoords: markedCoords }),
+              });
+            if (!response.ok) {
+            document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+            return;
+            }
+            const data = await response.json();
+            render4dHexGrid(data.board);
+            return;
+          }
+
+      async function createEdges(player) {
+        const response = await fetch("/getEdges", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, coordOrder: coordOrder, player: player }),
+        });
+        if (!response.ok) {
+          document.getElementById("error").innerHTML = "Server error: " + response.status;
+          return;
+        }
+        const data = await response.json();
+        data.edges.forEach(edge => {
+            btn1 = buttonArray[edge[0][0]][edge[0][1]][edge[0][2]][edge[0][3]];
+            btn2 = buttonArray[edge[1][0]][edge[1][1]][edge[1][2]][edge[1][3]];
+            drawEdge(getCenter(btn1, document.getElementById("boardWrapper")), getCenter(btn2, document.getElementById("boardWrapper")), player);
+        })
+      }
+
+      async function createTriangles(player) {
+        const response = await fetch("/getTriangles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, coordOrder: coordOrder, player: player }),
+        });
+        if (!response.ok) {
+          document.getElementById("error").innerHTML = "Server error: " + response.status;
+          return;
+        }
+        const data = await response.json();
+        data.triangles.forEach(triangle => {
+            btn1 = buttonArray[triangle[0][0]][triangle[0][1]][triangle[0][2]][triangle[0][3]];
+            btn2 = buttonArray[triangle[1][0]][triangle[1][1]][triangle[1][2]][triangle[1][3]];
+            btn3 = buttonArray[triangle[2][0]][triangle[2][1]][triangle[2][2]][triangle[2][3]];
+            drawTriangle(getCenter(btn1, document.getElementById("boardWrapper")), getCenter(btn2, document.getElementById("boardWrapper")), getCenter(btn3, document.getElementById("boardWrapper")), player);
+        })
+        data.edges.forEach(edge => {
+            btn1 = buttonArray[edge[0][0]][edge[0][1]][edge[0][2]][edge[0][3]];
+            btn2 = buttonArray[edge[1][0]][edge[1][1]][edge[1][2]][edge[1][3]];
+            drawEdge(getCenter(btn1, document.getElementById("boardWrapper")), getCenter(btn2, document.getElementById("boardWrapper")), player);
+        })
+      }
+
+      function clearEdges() {
+        const edgeLayer = document.getElementById('edgeLayer');
+        edgeLayer.innerHTML = "";
+      }
+
+      async function startGame(event) {
+        event.preventDefault();
+        clearMarking();
+
+        if (marking){
+            toggleMarking();
+        }
+
+        size = document.getElementById("size").value;
+
+        gameOver = false;
+        const response = await fetch("/start4dGame", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, size: size, coordOrder: coordOrder }),
+        });
+
+        if (!response.ok) {
+          document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+          return;
+        }
+
+        const data = await response.json();
+        userId = data.user_id;
+        localStorage.setItem("userId", userId);
+        render4dHexGrid(data.cells);
+        document.getElementById("winner").innerHTML = "";
+        document.getElementById("player").innerHTML = "Blue";
+        localPlayer = 1;
+        localStorage.setItem("localPlayer", localPlayer);
+        const sidebar = document.querySelector(".sidebar");
+        sidebar.style.setProperty("background-color", "#0f72e2");
+        renderAxisButtons();
+      }
+
+      async function renderAdj(coords, add) {
+        const response = await fetch("/renderAdj", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ coords: coords, user_id: userId }),
+        }
+        );
+        if (!response.ok) {
+          document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+          return;
+        }
+        const data = await response.json();
+    adj = data.adj;
+    adj.push(coords);
+    for (let i = 0; i < adj.length; i++) {
+        adjCoord = adj[i];
+        subspace = buttonArray;
+        for (let j = 0; j < adjCoord.length; j++) {
+            subspace = subspace[adjCoord[j]];
+        }
+        if (subspace.classList.contains("player-1") || subspace.classList.contains("player--1")){
+            if(add){
+                subspace.classList.add("textlight-" + (data.player));
+            }
+            else{
+                subspace.classList.remove("textlight-" + (data.player));
+            }
+        }
+        else{
+            if(add){
+                subspace.classList.add("highlight-" + (data.player));
+            }
+            else{
+                subspace.classList.remove("highlight-" + (data.player));
+            }
+        }
+
+
+        }
+        
+      }
+
+      function getCenter(btn, wrapper) {
+      const btnRect = btn.getBoundingClientRect();
+      const wrapRect = wrapper.getBoundingClientRect();
+      return {
+        x: (btnRect.left + btnRect.width / 2) - wrapRect.left,
+        y: (btnRect.top + btnRect.height / 2) - wrapRect.top,
+    };
+}
+
+    function renderAxisButtons(){
+        axisNames = ["U", "V", "X", "Y"]
+        coordNames = []
+        coordOrder.forEach(coord => {
+            coordNames.push(axisNames[coord]);
+        });
+        for (let i = 0; i < 4; i++){
+            document.getElementById("axis" + i).innerHTML = coordNames[i];
+            for (let j = 0; j < 3; j++){
+                let m = (i + j + 1) % 4;
+                const axisChangeButton = document.createElement("button");
+                axisChangeButton.textContent = "Change to " + axisNames[coordOrder[m]];
+                axisChangeButton.onclick = () => changeAxis(i, m);
+                document.getElementById("axisChange" + i + j).innerHTML = "";
+                document.getElementById("axisChange" + i + j).appendChild(axisChangeButton);
+            }
+        }
+    }
+
+
+async function changeAxis(i, m){
+
+    dummy = coordOrder[m];
+    coordOrder[m] = coordOrder[i];
+    coordOrder[i] = dummy;
+    renderAxisButtons();
+
+    markedCoords.forEach(coord => {
+      dummy = coord[m];
+      coord[m] = coord[i];
+      coord[i] = dummy;
+    });
+    localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+
+    localStorage.setItem("coordOrder", JSON.stringify(coordOrder));
+    const response = await fetch("/getBoard4d", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, coordOrder: coordOrder }),
+    });
+    if (!response.ok) {
+      document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+      return;
+    }
+    const data = await response.json();
+    render4dHexGrid(data.board);
+}
+
+async function recoverGame(){
+    const response = await fetch("/getBoard4d", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, coordOrder: coordOrder }),
+    });
+    if (!response.ok) {
+      document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+      return;
+    }
+    const data = await response.json();
+    render4dHexGrid(data.board);
+    renderAxisButtons();
+}
+
+function drawEdge(start, end, player) {
+  const edgeLayer = document.getElementById('edgeLayer');
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', start.x);
+  line.setAttribute('y1', start.y);
+  line.setAttribute('x2', end.x);
+  line.setAttribute('y2', end.y);
+  line.setAttribute('stroke', player === 1 ? '#060359' : '#590303');
+  line.setAttribute('stroke-width', '2');
+  edgeLayer.appendChild(line);
+}
+
+function drawTriangle(p1, p2, p3, player) {
+  const edgeLayer = document.getElementById('edgeLayer');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  poly.setAttribute(
+    'points',
+    `${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`
+  );
+  poly.setAttribute('fill', player === 1 ? 'rgba(6, 3, 89, 0.2)' : 'rgba(89, 3, 3, 0.2)');
+  poly.setAttribute('stroke', player === 1 ? '#060359' : '#590303');
+  poly.setAttribute('stroke-width', '2');
+  edgeLayer.appendChild(poly);
+}
+
+function toggleMarking() {
+  marking = !marking;
+  localStorage.setItem("marking", marking);
+  if (marking) {
+    document.getElementById("marking").innerHTML = "Marking";
+  }
+  else {
+    document.getElementById("marking").innerHTML = "";
+  }
+}
+
+async function clearMarking() {
+  markedCoords = [];
+  localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+  const response = await fetch("/getBoard4d", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, coordOrder: coordOrder }),
+    });
+    if (!response.ok) {
+      document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+      return;
+    }
+    const data = await response.json();
+    render4dHexGrid(data.board);
+  return;
+}
+    </script>
+  </head>
+  <body>
+    <div class="page">
+<aside class="sidebar">
+ <p>Player: <span id="player"></span></p>
+    <form onsubmit = "startGame(event)">
+        <label for="fname">Size:</label>
+        <input type="text" id="size" name="size" size="4">
+        <input type="submit" value="Submit">
+      </form>
+    
+      <button onclick="toggleMarking()">Toggle Marking</button>
+      <p><span id="marking"></span></p>
+      <button onclick="clearMarking()">Clear Marking</button>
+      <br>
+      <button onclick="createEdges(1)">Create Blue Edges</button> 
+      <button onclick="createEdges(-1)">Create Red Edges</button> 
+      <button onclick="clearEdges()">Clear Edges</button>
+      <br>
+      <button onclick="createTriangles(1)">Create Blue Triangles</button> 
+      <button onclick="createTriangles(-1)">Create Red Triangles</button>
+      <button onclick="clearEdges()">Clear Triangles</button>
+      <br>
+      <button onclick="recoverGame()">Recover Game</button>
+      <br> Large Vertical Axis: <span id="axis0"></span> <div id="axisChange00"> </div> <div id="axisChange01"> </div> <div id="axisChange02"> </div>
+      <br> Large Horizontal Axis: <span id="axis1"></span> <div id="axisChange10"> </div> <div id="axisChange11"> </div> <div id="axisChange12"> </div>
+      <br> Small Vertical Axis: <span id="axis2"></span> <div id="axisChange20"> </div> <div id="axisChange21"> </div> <div id="axisChange22"> </div>
+      <br> Small Horizontal Axis: <span id="axis3"></span> <div id="axisChange30"> </div> <div id="axisChange31"> </div> <div id="axisChange32"> </div>
+</aside>
+<main class="main-content">
+    <span id="error"></span>
+
+    <div id="boardWrapper" style="position: relative;">
+        <div id="hexGrid" class="hex-grid-container"></div>
+        <svg id="edgeLayer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></svg>
+      </div>
+    <p><span id="winner"></span></p>
+  
+  
+  </main>
+    </div>
+</body>
+</html>

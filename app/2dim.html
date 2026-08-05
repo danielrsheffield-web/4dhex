@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Choose Coordinates</title>
+    <script>
+
+    let userId = localStorage.getItem("userId");
+
+async function play2d(event) {
+            event.preventDefault();
+            const coords = [
+        parseInt(document.getElementById("Coord0").value),
+        parseInt(document.getElementById("Coord1").value),
+    ];
+    const response = await fetch("/play2d", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coords: coords, user_id: userId }),
+    });
+
+
+    
+    if (!response.ok) {
+    document.getElementById("number").innerHTML = "Server error: " + response.status;
+}
+
+    const data = await response.json();
+    document.getElementById("number").innerHTML = coords;
+    document.getElementById("board").innerHTML = data.textBoard;
+    document.getElementById("player").innerHTML = data.player;
+
+    if (data.victory) {
+        document.getElementById("winner").innerHTML = "Player " + (-data.player) + " has won!";
+    }
+}
+
+        
+        
+
+
+        async function startGame() {
+            const response = await fetch("/start2dGame", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: userId }),
+            });
+
+        if (!response.ok) {
+            document.getElementById("board").innerHTML = "Server error: " + response.status;
+            return;
+        }
+        
+        const data = await response.json();
+        userId = data.user_id;
+        localStorage.setItem("userId", userId);
+        document.getElementById("board").innerHTML = data.textBoard;
+        document.getElementById("winner").innerHTML = "";
+        document.getElementById("player").innerHTML = 1;
+        }
+
+
+    </script>
+  </head>
+  <body>
+    <p>Board:<br><span id="board"></span></p>
+    
+    <p>Coordinates: <span id="number">[0,0]</span></p>
+    <p>Player: <span id="player"></span></p>
+    <form onsubmit = "play2d(event)">
+        <label for="fname">Coordinates:</label>
+        <input type="text" id="Coord0" name="fCoord0" size="4">
+        <input type="text" id="Coord1" name="fCoord1" size="4">
+        <input type="submit" value="Submit">
+      </form>
+
+      <button onclick="startGame()">Start New Game</button>
+      <p><span id="winner"></span></p>
+  </body>
+</html>

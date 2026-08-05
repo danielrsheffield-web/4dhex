@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hex Game</title>
+    <style>
+        :root {
+        --hex-size: 50px;
+        }
+
+      .hex-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        margin: 4px 0;
+      }
+      .hex-row {
+        display: flex;
+        gap: 1px;
+      }
+
+
+      .hex-row + .hex-row {
+          margin-top: -11px;   /* pull this row up — tune number */
+    }
+
+      .hex-btn {
+        width: calc(var(--hex-size) * .933);
+        height: var(--hex-size);
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .hex-btn:disabled {
+        cursor: default;
+      }
+      .player-0 {
+        background-color: #e8e8e8;
+      }
+      .player-1 {
+        background-color: #0f72e2;
+        color: white;
+      }
+      .player--1 {
+        background-color: #d20d0d;
+        color: white;
+      }
+      .hex-btn.highlight-1 {
+        background-color: #b1d2f9;
+        }
+        .hex-btn.highlight--1 {
+        background-color: #f9b8b1;
+        }
+    </style>
+    <script>
+      let userId = localStorage.getItem("userId");
+      let gameOver = false;
+      let buttonArray = [];
+
+      function render2dHexGrid(cells) {
+        buttonArray = [];
+        const grid = document.getElementById("hexGrid");
+        grid.innerHTML = "";
+        cells.forEach((row, r) => {
+          const rowButtonArray = [];
+          buttonArray.push(rowButtonArray);
+          const rowDiv = document.createElement("div");
+          rowDiv.className = "hex-row";
+          rowDiv.style.marginLeft = (cells.length - 1 - r) * 24 + "px";
+          row.forEach((player, c) => {
+            const btn = document.createElement("button");
+            btn.className = "hex-btn player-" + player;
+            btn.textContent = player === 0 ? "" : (player === 1 ? "1" : "-");
+            btn.disabled = gameOver || player !== 0;
+            btn.onclick = () => playAt([r, c]);
+            btn.onmouseenter = () => renderAdj([r, c], true);
+            btn.onmouseleave = () => renderAdj([r, c], false);
+            rowButtonArray.push(btn);
+            rowDiv.appendChild(btn);
+          });
+          grid.appendChild(rowDiv);
+        });
+      }
+
+      async function playAt(coords) {
+        if (gameOver || !userId) return;
+
+        const response = await fetch("/play2d", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ coords: coords, user_id: userId }),
+        });
+
+        if (!response.ok) {
+          document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+          return;
+        }
+
+        const data = await response.json();
+        render2dHexGrid(data.cells);
+        document.getElementById("player").innerHTML = data.player;
+
+        if (data.victory) {
+          gameOver = true;
+          document.getElementById("winner").innerHTML = "Player " + (-data.player) + " has won!";
+          render2dHexGrid(data.cells);
+        }
+      }
+
+      async function startGame(event) {
+        event.preventDefault();
+        
+        gameOver = false;
+        const response = await fetch("/start2dGame", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, size: document.getElementById("size").value }),
+        });
+
+        if (!response.ok) {
+          document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+          return;
+        }
+
+        const data = await response.json();
+        userId = data.user_id;
+        localStorage.setItem("userId", userId);
+        render2dHexGrid(data.cells);
+        document.getElementById("winner").innerHTML = "";
+        document.getElementById("player").innerHTML = data.player;
+      }
+
+      async function renderAdj(coords, add) {
+        const response = await fetch("/renderAdj", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ coords: coords, user_id: userId }),
+        }
+        );
+        if (!response.ok) {
+          document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+          return;
+        }
+        const data = await response.json();
+    adj = data.adj;
+    adj.push(coords);
+    for (let i = 0; i < adj.length; i++) {
+        adjCoord = adj[i];
+        subspace = buttonArray;
+        for (let j = 0; j < adjCoord.length; j++) {
+            subspace = subspace[adjCoord[j]];
+        }
+        if (!subspace.classList.contains("player-1") && !subspace.classList.contains("player--1")){
+            if(add){
+                subspace.classList.add("highlight-" + (data.player));
+            }
+            else{
+                subspace.classList.remove("highlight-" + (data.player));
+            }
+        }
+
+    }
+        
+      }
+    </script>
+  </head>
+  <body>
+    <p>Player: <span id="player"></span></p>
+
+    <div id="hexGrid" class="hex-grid"></div>
+    <p><span id="winner"></span></p>
+  
+  <form onsubmit = "startGame(event)">
+    <label for="fname">Size:</label>
+    <input type="text" id="size" name="size" size="4">
+    <input type="submit" value="Submit">
+  </form>
+    </body>
+</html>

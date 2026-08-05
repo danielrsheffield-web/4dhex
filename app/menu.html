@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Choose Coordinates</title>
+    <script>
+
+        async function localMult(event) {
+            event.preventDefault();
+            const size = document.getElementById("size").value;
+            window.location.href = "/localMultiplayer?size=" + size;
+        }
+
+        async function botGame(event, bot) {
+            event.preventDefault();
+            const size = document.getElementById("size").value;
+            window.location.href = "/botGame?size=" + size + "&bot=" + bot;
+        }
+    </script>
+  </head>
+  <body>
+    <p>Board:<br><span id="board"></span></p>
+    
+    <p>Coordinates: <span id="number">[0,0]</span></p>
+    <p>Player: <span id="player"></span></p>
+        <form onsubmit = "localMult(event)">
+            <label for="fname">Size:</label>
+            <input type="text" id="size" name="size" size="4">
+            <input type="submit" value="Submit">
+        </form>
+        <form onsubmit = "botGame(event, 1)">
+            <label for="fname">Bot 1:</label>
+            <input type="text" id="size" name="size" size="4">
+            <input type="submit" value="Submit">
+        </form>
+        <form onsubmit = "botGame(event, -1)">
+            <label for="fname">Bot -1:</label>
+            <input type="text" id="bot" name="bot" size="4">
+            <input type="submit" value="Submit">
+        </form>
+
+      <p><span id="winner"></span></p>
+  </body>
+</html>
