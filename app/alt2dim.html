@@ -61,20 +61,64 @@
       let buttonArray = [];
       let boardSize = 0;
       let hexSize = 50;
-      let baseX = 200;
-      let baseY = 50;
+      let baseX = 400;
+      let baseY = 400;
 
       function render2dHexGrid(cells) {
         var c = document.getElementById("myCanvas");
         var ctx = c.getContext("2d");
 
+        ctx.clearRect(0, 0, c.width, c.height);
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = "blue";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = "blue";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = "red";
+        ctx.fill();
+        ctx.stroke();
+
         for (let i = 0; i < cells.length; i++) {
           for (let j = 0; j < cells[i].length; j++) {
             x = baseX + ((i - j) * hexSize * .75)
-            y = baseY + ((i + j) * hexSize * .43)
+            y = baseY + ((i + j) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
             drawHex(x, y, cells[i][j], ctx);
           }
         }
+
+
     }
 
     function handleMouseDown(e){
@@ -89,7 +133,7 @@
       for (let i = 0; i < boardSize; i++) {
         for (let j = 0; j < boardSize; j++) {
           x = baseX + ((i - j) * hexSize * .75)
-          y = baseY + ((i + j) * hexSize * .43)
+          y = baseY + ((i + j) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
           ctx.beginPath();
         ctx.moveTo(x + (hexSize / 4), y - (hexSize * .43));
         ctx.lineTo(x + (hexSize / 2), y);
@@ -162,7 +206,7 @@
       async function startGame(event) {
         event.preventDefault();
 
-        boardSize = document.getElementById("size").value;
+        boardSize = Number(document.getElementById("size").value);
         
         gameOver = false;
         const response = await fetch("/start2dGame", {
@@ -220,8 +264,9 @@
   </head>
   <body>
     <p>Player: <span id="player"></span></p>
+    <span id="error"></span>
 
-    <canvas id="myCanvas" width="400" height="400"></canvas>
+    <canvas id="myCanvas" width="800" height="800"></canvas>
     <p><span id="winner"></span></p>
   
   <form onsubmit = "startGame(event)">
