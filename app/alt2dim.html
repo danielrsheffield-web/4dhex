@@ -59,30 +59,79 @@
       let userId = localStorage.getItem("userId");
       let gameOver = false;
       let buttonArray = [];
+      let boardSize = 0;
+      let hexSize = 50;
+      let baseX = 200;
+      let baseY = 50;
 
       function render2dHexGrid(cells) {
-        buttonArray = [];
-        const grid = document.getElementById("hexGrid");
-        grid.innerHTML = "";
-        cells.forEach((row, r) => {
-          const rowButtonArray = [];
-          buttonArray.push(rowButtonArray);
-          const rowDiv = document.createElement("div");
-          rowDiv.className = "hex-row";
-          rowDiv.style.marginLeft = (cells.length - 1 - r) * 24 + "px";
-          row.forEach((player, c) => {
-            const btn = document.createElement("button");
-            btn.className = "hex-btn player-" + player;
-            btn.textContent = player === 0 ? "" : (player === 1 ? "1" : "-");
-            btn.disabled = gameOver || player !== 0;
-            btn.onclick = () => playAt([r, c]);
-            btn.onmouseenter = () => renderAdj([r, c], true);
-            btn.onmouseleave = () => renderAdj([r, c], false);
-            rowButtonArray.push(btn);
-            rowDiv.appendChild(btn);
-          });
-          grid.appendChild(rowDiv);
-        });
+        var c = document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
+
+        for (let i = 0; i < cells.length; i++) {
+          for (let j = 0; j < cells[i].length; j++) {
+            x = baseX + ((i - j) * hexSize * .75)
+            y = baseY + ((i + j) * hexSize * .43)
+            drawHex(x, y, cells[i][j], ctx);
+          }
+        }
+    }
+
+    function handleMouseDown(e){
+      e.preventDefault();
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      console.log(mouseX, mouseY);
+
+      for (let i = 0; i < boardSize; i++) {
+        for (let j = 0; j < boardSize; j++) {
+          x = baseX + ((i - j) * hexSize * .75)
+          y = baseY + ((i + j) * hexSize * .43)
+          ctx.beginPath();
+        ctx.moveTo(x + (hexSize / 4), y - (hexSize * .43));
+        ctx.lineTo(x + (hexSize / 2), y);
+        ctx.lineTo(x + (hexSize / 4), y + (hexSize * .43));
+        ctx.lineTo(x - (hexSize / 4), y + (hexSize * .43));
+        ctx.lineTo(x - (hexSize / 2), y);
+        ctx.lineTo(x - (hexSize / 4), y - (hexSize * .43));
+        ctx.closePath();
+          if (ctx.isPointInPath(mouseX, mouseY)) {
+            playAt([i, j]);
+            return;
+          }
+        }
+      }
+      
+
+    }
+
+    // listen for mousedown events
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
+    });
+
+
+
+
+
+
+
+      function drawHex(x, y, player, ctx) {
+        ctx.beginPath();
+        ctx.moveTo(x + (hexSize / 4), y - (hexSize * .43));
+        ctx.lineTo(x + (hexSize / 2), y);
+        ctx.lineTo(x + (hexSize / 4), y + (hexSize * .43));
+        ctx.lineTo(x - (hexSize / 4), y + (hexSize * .43));
+        ctx.lineTo(x - (hexSize / 2), y);
+        ctx.lineTo(x - (hexSize / 4), y - (hexSize * .43));
+        ctx.lineTo(x + (hexSize / 4), y - (hexSize * .43));
+        ctx.closePath();
+        ctx.fillStyle = player === 1 ? "blue" : (player === -1 ? "red" : "#e8e8e8");
+        ctx.fill();
+        ctx.stroke();
       }
 
       async function playAt(coords) {
@@ -112,12 +161,14 @@
 
       async function startGame(event) {
         event.preventDefault();
+
+        boardSize = document.getElementById("size").value;
         
         gameOver = false;
         const response = await fetch("/start2dGame", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, size: document.getElementById("size").value }),
+          body: JSON.stringify({ user_id: userId, size: boardSize }),
         });
 
         if (!response.ok) {
@@ -170,11 +221,11 @@
   <body>
     <p>Player: <span id="player"></span></p>
 
-    <div id="hexGrid" class="hex-grid"></div>
+    <canvas id="myCanvas" width="400" height="400"></canvas>
     <p><span id="winner"></span></p>
   
   <form onsubmit = "startGame(event)">
-    <label for="fname">Size:</label>
+    <label for="size">Size:</label>
     <input type="text" id="size" name="size" size="4">
     <input type="submit" value="Submit">
   </form>
