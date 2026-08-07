@@ -141,87 +141,241 @@ body {
       let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
       let marking = JSON.parse(localStorage.getItem("marking") || "false");
       let gameOver = false;
-      let buttonArray = [];
+      let storedCells = [];
       let localPlayer = 0;
+      let boardSize = 0;
+      let hexSize = 50;
+      let centerX = 0;
+      let centerY = 0;
+      let currentHex = [];
+
     
-      function render2dHexGrid(m, f, cells, faceDiv) {
-        faceButtonArray = [[0]*cells.length]*cells.length;
-        const grid = document.getElementById("hexGrid");
+    function render2dHexGrid(cells, baseX, baseY, ctx, axes) {
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
         for (let i = 0; i < cells.length; i++) {
-            const rowDiv = document.createElement("div");
-            rowDiv.className = "hex-row";
-            rowDiv.style.marginLeft = (cells.length - 1 - i) * 21 + "px";
-            for (let j = 0; j <= i; j++) {  
-            const btn = document.createElement("button");
-            btn.className = "hex-btn player-" + cells[i - j][j];
-            btn.textContent = cells[i - j][j] === 0 ? "" : "●";
-            btn.disabled = gameOver;
-            faceButtonArray[i - j][j] = btn;
-            if (player === 0){
-            btn.onclick = () => playAt(btn,[m, f, i - j, j]);
-          }else{
-            btn.onclick = () => mark(btn, [m, f, i - j, j]);
+          for (let j = 0; j < cells[i].length; j++) {
+            x = baseX + ((i - j) * hexSize * .75)
+            y = baseY + ((i + j) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
+            drawHex(x, y, cells[i][j], ctx);
           }
-            btn.onmouseenter = () => renderAdj([m, f, i - j, j], true);
-            btn.onmouseleave = () => renderAdj([m, f, i - j, j], false);
-            faceButtonArray[i - j][j].push(btn);
-            rowDiv.appendChild(btn);
-            }
-            faceDiv.appendChild(rowDiv);
         }
-        return faceButtonArray;
+
+
+    }
+
+    function findHex4d(mouseX, mouseY, ctxt){
+        c = document.getElementById("myCanvas");
+        ctx = c.getContext("2d");
+
+
+      for (let i = 0; i < boardSize; i++) {
+        for (let j = 0; j < boardSize; j++) {
+            baseX = centerX + (((i - j) * hexSize * .75) * (boardSize + 1.5))
+            baseY = centerY + (((i + j) * hexSize * .43) * (boardSize + 1)) - ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
+        ctx.beginPath();
+        ctx.moveTo(baseX - (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX + (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
+        ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
+        ctx.closePath();
+          if (ctx.isPointInPath(mouseX, mouseY)) {
+            return findHex2d(mouseX, mouseY, baseX, baseY, i, j, ctx);
+          }
+        }
+      }
+      
+
+    }
+
+    function findHex2d(mouseX, mouseY, baseX, baseY, a, b, ctx){
+        for (let i = 0; i < boardSize; i++) {
+        for (let j = 0; j < boardSize; j++) {
+          x = baseX + ((i - j) * hexSize * .75)
+          y = baseY + ((i + j) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
+        genHex(x, y, ctx);
+          if (ctx.isPointInPath(mouseX, mouseY)) {
+            return([a, b, i, j]);
+          }
+        }
+      }
+
+    }
+
+    function handleMouseDown(e){
+      e.preventDefault();
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      coords = findHex4d(mouseX, mouseY, ctx);
+      playAt(coords);
+    }
+
+    function handleMouseMove(e){
+      e.preventDefault();
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      if (currentHex.length === 0) {
+        currentHex = findHex4d(mouseX, mouseY, ctx);
+        renderAdj(currentHex, localStorage.getItem("userId"));
+        return;
+      }
+      center = center(currentHex);
+      genHex(center.x, center.y, ctx);
+    if (!ctx.isPointInPath(mouseX, mouseY)) {
+      currentHex = findHex4d(mouseX, mouseY, ctx);
+      renderAdj({coords: currentHex, user_id: localStorage.getItem("userId")});
+      return;
+    }
+    }
+
+    // listen for mousedown events
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
+        document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
+    });
+
+
+
+      function genHex(x, y, ctx) {
+        ctx.beginPath();
+        ctx.moveTo(x + (hexSize / 4), y - (hexSize * .43));
+        ctx.lineTo(x + (hexSize / 2), y);
+        ctx.lineTo(x + (hexSize / 4), y + (hexSize * .43));
+        ctx.lineTo(x - (hexSize / 4), y + (hexSize * .43));
+        ctx.lineTo(x - (hexSize / 2), y);
+        ctx.lineTo(x - (hexSize / 4), y - (hexSize * .43));
+        ctx.closePath();
+      }
+
+
+
+      function drawHex(x, y, player, ctx) {
+        genHex(x, y, ctx);
+        ctx.fillStyle = player === 1 ? "blue" : (player === -1 ? "red" : "#e8e8e8");
+        ctx.fill();
+        ctx.stroke();
       }
 
       function render4dHexGrid(cells) {
-        clearEdges();
-        buttonArray = [];
-        const grid = document.getElementById("hexGrid");
-        grid.innerHTML = "";
-        grid.className = "hex-grid-container";
-        let m = cells.length - 1;
-        while (m >= 0) {
-            megaFaceButtonArray = [];
-            megaFaceDiv = document.createElement("div");
-            megaFaceDiv.className = "hex-grid-row";
-            megaFaceDiv.style.marginLeft = m * 55 * cells.length + "px";
-            grid.appendChild(megaFaceDiv);
-            f = cells[m].length - 1;
-            while (f >= 0) {
-                faceDiv = document.createElement("div");
-                faceDiv.className = "hex-grid";
-                megaFaceDiv.appendChild(faceDiv);
-                faceButtonArray = [];
-                render2dHexGrid(m, f, cells[m][f], faceDiv);
-                megaFaceButtonArray.push(faceButtonArray);
-                f--;
-            }
-            megaFaceButtonArray.reverse();
-            buttonArray.push(megaFaceButtonArray);
-            m--;
-        }
-        buttonArray.reverse();
+        storedCells = cells;
+        var c = document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
+        ctx.strokeStyle = "black";
 
-        for (let i = 0; i < markedCoords.length; i++) {
-        markedCoord = markedCoords[i];
-        subspace = buttonArray;
-        for (let j = 0; j < markedCoord.length; j++) {
-            subspace = subspace[markedCoord[j]];
+        axes = [0, 0, 0, 0];
+        for (let i = 0; i < coordOrder.length; i++) {
+            if (coordOrder[i] === 0 || coordOrder[i] === 2) {
+                axes[i] = 1;
+            }
+            else {
+                axes[i] = -1;
+            }
         }
-        if (subspace.classList.contains("player-1") || subspace.classList.contains("player--1")){
-            subspace.classList.add("text-marked");
+
+        ctx.clearRect(0, 0, c.width, c.height);
+
+        centerX = c.width / 2;
+        centerY = c.height / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY - ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
+        ctx.lineTo(centerX - ((boardSize + 1) * hexSize * .75), centerY - ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
+        ctx.lineTo(centerX - (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
+        ctx.lineTo(centerX, centerY);
+        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY + ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
+        ctx.lineTo(centerX + ((boardSize + 1) * hexSize * .75), centerY + ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
+        ctx.lineTo(centerX + (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
+        ctx.lineTo(centerX, centerY);
+        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY - ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
+        ctx.lineTo(centerX + ((boardSize + 1) * hexSize * .75), centerY - ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
+        ctx.lineTo(centerX + (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
+        ctx.lineTo(centerX, centerY);
+        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY + ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
+        ctx.lineTo(centerX - ((boardSize + 1) * hexSize * .75), centerY + ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
+        ctx.lineTo(centerX - (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
+        ctx.lineTo(centerX, centerY);
+        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        for (let i = 0; i < cells.length; i++) {
+          for (let j = 0; j < cells[i].length; j++) {
+            x = centerX + (((i - j) * hexSize * .75) * (boardSize + 1.5))
+            y = centerY + (((i + j) * hexSize * .43) * (boardSize + 1)) - ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
+            render2dHexGrid(cells[i][j], x, y, ctx, axes);
+          }
         }
-        else{
-            subspace.className = "hex-btn marked";
-            subspace.textContent = "●";
-        }
-        }
+        
+        
     }
 
-      async function playAt(btn, coords) {
-        if (marking) {
-          mark(btn, coords);
-          return;
-        }
+      async function playAt(coords) {
 
         if (gameOver || !userId) return;
 
@@ -293,7 +447,18 @@ body {
             return;
           }
 
-      async function createEdges(player) {
+      function center(coords){
+        subCenterX = centerX + (((coords[0] - coords[1]) * hexSize * .75) * (boardSize + 1.5))
+        subCenterY = centerY + (((coords[0] + coords[1]) * hexSize * .43) * (boardSize + 1)) - ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
+        x = subCenterX + ((coords[2] - coords[3]) * hexSize * .75)
+        y = subCenterY + ((coords[2] + coords[3]) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
+        return {
+          x: x,
+          y: y,
+        }
+      }
+      
+    async function createEdges(player) {
         const response = await fetch("/getEdges", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -303,11 +468,19 @@ body {
           document.getElementById("error").innerHTML = "Server error: " + response.status;
           return;
         }
+        c = document.getElementById("myCanvas");
+        ctx = c.getContext("2d");
+
+
         const data = await response.json();
         data.edges.forEach(edge => {
-            btn1 = buttonArray[edge[0][0]][edge[0][1]][edge[0][2]][edge[0][3]];
-            btn2 = buttonArray[edge[1][0]][edge[1][1]][edge[1][2]][edge[1][3]];
-            drawEdge(getCenter(btn1, document.getElementById("boardWrapper")), getCenter(btn2, document.getElementById("boardWrapper")), player);
+            center1 = center(edge[0]);
+            center2 = center(edge[1]);
+            ctx.strokeStyle = player === 1 ? '#060359' : '#590303';
+            ctx.beginPath();
+            ctx.moveTo(center1.x, center1.y);
+            ctx.lineTo(center2.x, center2.y);
+            ctx.stroke();
         })
       }
 
@@ -323,21 +496,23 @@ body {
         }
         const data = await response.json();
         data.triangles.forEach(triangle => {
-            btn1 = buttonArray[triangle[0][0]][triangle[0][1]][triangle[0][2]][triangle[0][3]];
-            btn2 = buttonArray[triangle[1][0]][triangle[1][1]][triangle[1][2]][triangle[1][3]];
-            btn3 = buttonArray[triangle[2][0]][triangle[2][1]][triangle[2][2]][triangle[2][3]];
-            drawTriangle(getCenter(btn1, document.getElementById("boardWrapper")), getCenter(btn2, document.getElementById("boardWrapper")), getCenter(btn3, document.getElementById("boardWrapper")), player);
-        })
-        data.edges.forEach(edge => {
-            btn1 = buttonArray[edge[0][0]][edge[0][1]][edge[0][2]][edge[0][3]];
-            btn2 = buttonArray[edge[1][0]][edge[1][1]][edge[1][2]][edge[1][3]];
-            drawEdge(getCenter(btn1, document.getElementById("boardWrapper")), getCenter(btn2, document.getElementById("boardWrapper")), player);
+            center1 = center(triangle[0]);
+            center2 = center(triangle[1]);
+            center3 = center(triangle[2]);
+            ctx.beginPath();
+            ctx.moveTo(center1.x, center1.y);
+            ctx.lineTo(center2.x, center2.y);
+            ctx.lineTo(center3.x, center3.y);
+            ctx.closePath();
+            ctx.fillStyle = player === 1 ? 'rgba(6, 3, 89, 0.2)' : 'rgba(89, 3, 3, 0.2)';
+            ctx.fill();
+            ctx.strokeStyle = player === 1 ? '#060359' : '#590303';
+            ctx.stroke();
         })
       }
 
       function clearEdges() {
-        const edgeLayer = document.getElementById('edgeLayer');
-        edgeLayer.innerHTML = "";
+        render4dHexGrid(storedCells);
       }
 
       async function startGame(event) {
@@ -348,13 +523,13 @@ body {
             toggleMarking();
         }
 
-        size = document.getElementById("size").value;
+        boardSize = Number(document.getElementById("size").value);
 
         gameOver = false;
         const response = await fetch("/start4dGame", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, size: size, coordOrder: coordOrder }),
+          body: JSON.stringify({ user_id: userId, size: boardSize, coordOrder: coordOrder }),
         });
 
         if (!response.ok) {
@@ -389,30 +564,14 @@ body {
         const data = await response.json();
     adj = data.adj;
     adj.push(coords);
+
+    c = document.getElementById("myCanvas");
+    ctx = c.getContext("2d");
+
     for (let i = 0; i < adj.length; i++) {
-        adjCoord = adj[i];
-        subspace = buttonArray;
-        for (let j = 0; j < adjCoord.length; j++) {
-            subspace = subspace[adjCoord[j]];
-        }
-        if (subspace.classList.contains("player-1") || subspace.classList.contains("player--1")){
-            if(add){
-                subspace.classList.add("textlight-" + (data.player));
-            }
-            else{
-                subspace.classList.remove("textlight-" + (data.player));
-            }
-        }
-        else{
-            if(add){
-                subspace.classList.add("highlight-" + (data.player));
-            }
-            else{
-                subspace.classList.remove("highlight-" + (data.player));
-            }
-        }
-
-
+        center = center(adj[i]);
+        genHex(center.x, center.y, ctx);
+        ctx.fillStyle = localPlayer === 1 ? 'rgba(6, 3, 89, 0.2)' : 'rgba(89, 3, 3, 0.2)';
         }
         
       }
@@ -489,18 +648,6 @@ async function recoverGame(){
     renderAxisButtons();
 }
 
-function drawEdge(start, end, player) {
-  const edgeLayer = document.getElementById('edgeLayer');
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  line.setAttribute('x1', start.x);
-  line.setAttribute('y1', start.y);
-  line.setAttribute('x2', end.x);
-  line.setAttribute('y2', end.y);
-  line.setAttribute('stroke', player === 1 ? '#060359' : '#590303');
-  line.setAttribute('stroke-width', '2');
-  edgeLayer.appendChild(line);
-}
-
 function drawTriangle(p1, p2, p3, player) {
   const edgeLayer = document.getElementById('edgeLayer');
   const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
@@ -541,14 +688,45 @@ async function clearMarking() {
     render4dHexGrid(data.board);
   return;
 }
+
+async function newOrder(newOrder){
+    oldOrder = coordOrder;
+    coordOrder = newOrder;
+    localStorage.setItem("coordOrder", JSON.stringify(coordOrder));
+    const response = await fetch("/getBoard4d", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, coordOrder: coordOrder }),
+    });
+    if (!response.ok) {
+      document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+      return;
+    }
+    const data = await response.json();
+
+    newMarkedCoords = [];
+    for (let i = 0; i < markedCoords.length; i++) {
+        newMarkedCoords.push([0,0,0,0]);
+      for (let j = 0; j < 4; j++) {
+        oldPos = oldOrder.indexOf(coordOrder[j]);
+        newMarkedCoords[i][j] = markedCoords[i][oldPos];
+      }
+    }
+    markedCoords = newMarkedCoords;
+    localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+
+    render4dHexGrid(data.board);
+    renderAxisButtons();
+}
     </script>
   </head>
   <body>
     <div class="page">
 <aside class="sidebar">
+    <div id="hexGrid"></div>
  <p>Player: <span id="player"></span></p>
     <form onsubmit = "startGame(event)">
-        <label for="fname">Size:</label>
+        <label for="size">Size:</label>
         <input type="text" id="size" name="size" size="4">
         <input type="submit" value="Submit">
       </form>
@@ -565,6 +743,9 @@ async function clearMarking() {
       <button onclick="createTriangles(-1)">Create Red Triangles</button>
       <button onclick="clearEdges()">Clear Triangles</button>
       <br>
+      <button onclick="newOrder([0,2,1,3])">Blue Spanning</button>
+      <button onclick="newOrder([1,3,0,2])">Red Spanning</button>
+      <button onclick="newOrder([1,2,3,0])">Blue Horizontal, Red Vertical</button>
       <button onclick="recoverGame()">Recover Game</button>
       <br> Large Vertical Axis: <span id="axis0"></span> <div id="axisChange00"> </div> <div id="axisChange01"> </div> <div id="axisChange02"> </div>
       <br> Large Horizontal Axis: <span id="axis1"></span> <div id="axisChange10"> </div> <div id="axisChange11"> </div> <div id="axisChange12"> </div>
@@ -575,7 +756,7 @@ async function clearMarking() {
     <span id="error"></span>
 
     <div id="boardWrapper" style="position: relative;">
-        <div id="hexGrid" class="hex-grid-container"></div>
+        <canvas id="myCanvas" width="1600" height="1000"></canvas>
         <svg id="edgeLayer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></svg>
       </div>
     <p><span id="winner"></span></p>
