@@ -41,7 +41,7 @@ def menu():
 
 @app.get("/localMultiplayer", response_class = HTMLResponse)
 def localMultiplayer():
-    return FileResponse("app/localMult.html")
+    return FileResponse("app/4dim.html")
 
 class CoordRequest(BaseModel):
     coords: list

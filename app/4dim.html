@@ -51,89 +51,6 @@ body {
   padding: 8px;
   cursor: pointer;
 }
-
-      :root {
-        --hex-size: 45px;
-        --board-hex-size: 4;
-        --stagger: 200px;
-        }
-
-      .hex-grid-container {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        margin: 4px 0;
-      }
-
-      .hex-grid-row{
-        display: flex;
-        gap: -20px;
-      }
-
-      .hex-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        margin: 10px 0;
-      }
-      .hex-row {
-        display: flex;
-        gap: 1px;
-      }
-
-
-      .hex-row + .hex-row {
-          margin-top: -10px;   /* pull this row up — tune number */
-    }
-
-    .hex-grid-row + .hex-grid-row {
-        margin-top: 11px
-    }
-
-      .hex-btn {
-        width: var(--hex-size);
-        height: calc(var(--hex-size) * .9333);
-        clip-path: polygon(75% 0%, 25% 0%, 0% 50%, 25% 100%, 75% 100%, 100% 50%);
-        border: none;
-        cursor: pointer;
-        font-size: 24px;
-        font-weight: bold;
-        color: #333;
-      }
-
-      .hex-btn:disabled {
-        cursor: default;
-      }
-      .player-0 {
-        background-color: #e0e0e0;
-      }
-      .player-1 {
-        background-color: #0f72e2;
-        color: white;
-      }
-      .player--1 {
-        background-color: #d20d0d;
-        color: white;
-      }
-      .marked{
-        background-color: #f6ed01;
-        color: #f6ed01
-      }
-      .hex-btn.highlight-1 {
-        background-color: #b1d2f9;
-    }
-    .hex-btn.highlight--1 {
-        background-color: #f9b8b1;
-    }
-    .hex-btn.textlight-1 {
-        color: #0f72e2;
-    }
-    .hex-btn.textlight--1 {
-        color: #d20d0d;
-    }
-    .hex-btn.text-marked {
-        color: #f6ed01;
-    }
     </style>
     <script>
       let userId = localStorage.getItem("userId");
@@ -141,13 +58,11 @@ body {
       let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
       let marking = JSON.parse(localStorage.getItem("marking") || "false");
       let gameOver = false;
-      let storedCells = [];
       let localPlayer = 0;
       let boardSize = 0;
       let hexSize = 50;
       let centerX = 0;
       let centerY = 0;
-      let currentHex = [];
 
     
     function render2dHexGrid(cells, baseX, baseY, ctx, axes) {
@@ -210,8 +125,8 @@ body {
 
       for (let i = 0; i < boardSize; i++) {
         for (let j = 0; j < boardSize; j++) {
-            baseX = centerX + (((i - j) * hexSize * .75) * (boardSize + 1.5))
-            baseY = centerY + (((i + j) * hexSize * .43) * (boardSize + 1)) - ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
+            baseX = centerX - (((i - j) * hexSize * .75) * (boardSize + 1.5))
+            baseY = centerY - (((i + j) * hexSize * .43) * (boardSize + 1)) + ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
         ctx.beginPath();
         ctx.moveTo(baseX - (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX + (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
@@ -221,16 +136,17 @@ body {
         ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
         ctx.closePath();
           if (ctx.isPointInPath(mouseX, mouseY)) {
-            return findHex2d(mouseX, mouseY, baseX, baseY, i, j, ctx);
+            coords = findHex2d(mouseX, mouseY, baseX, baseY, i, j, ctx);
+            return coords;
           }
         }
       }
-      
+      return [];
 
     }
 
     function findHex2d(mouseX, mouseY, baseX, baseY, a, b, ctx){
-        for (let i = 0; i < boardSize; i++) {
+    for (let i = 0; i < boardSize; i++) {
         for (let j = 0; j < boardSize; j++) {
           x = baseX + ((i - j) * hexSize * .75)
           y = baseY + ((i + j) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
@@ -240,7 +156,7 @@ body {
           }
         }
       }
-
+      return [];
     }
 
     function handleMouseDown(e){
@@ -251,32 +167,58 @@ body {
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
       coords = findHex4d(mouseX, mouseY, ctx);
+      if (coords.length === 0) {return;}
+      storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
       playAt(coords);
     }
 
     function handleMouseMove(e){
-      e.preventDefault();
-      const canvas = document.getElementById("myCanvas");
-      const ctx = canvas.getContext("2d");
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      if (currentHex.length === 0) {
-        currentHex = findHex4d(mouseX, mouseY, ctx);
-        renderAdj(currentHex, localStorage.getItem("userId"));
-        return;
-      }
-      center = center(currentHex);
-      genHex(center.x, center.y, ctx);
-    if (!ctx.isPointInPath(mouseX, mouseY)) {
-      currentHex = findHex4d(mouseX, mouseY, ctx);
-      renderAdj({coords: currentHex, user_id: localStorage.getItem("userId")});
-      return;
-    }
+        e.preventDefault();
+
+        if (gameOver){
+          return;
+        }
+
+        currentHex = JSON.parse(localStorage.getItem("currentHex") || "[]");
+
+        const canvas = document.getElementById("myCanvas");
+        const ctx = canvas.getContext("2d");
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+
+        if (currentHex.length === 0){
+            coords = findHex4d(mouseX, mouseY, ctx);
+            currentHex = coords;
+            document.getElementById("error").innerHTML = "Current Hex: " + currentHex.join(", ");
+            return;
+        }
+        center = Center(currentHex);
+        x = center.x;
+        y = center.y;
+        genHex(x, y, ctx);
+        if (ctx.isPointInPath(mouseX, mouseY)){
+            return;
+        }
+        if (!ctx.isPointInPath(mouseX, mouseY)){
+            coords = findHex4d(mouseX, mouseY, ctx);
+            storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
+            render4dHexGrid(storedCells);
+            if (coords.length === 0) {return;}
+            currentHex = coords;
+            localStorage.setItem("currentHex", JSON.stringify(currentHex));
+            renderAdj(currentHex, true);
+            return;
+        }
+
     }
 
     // listen for mousedown events
     document.addEventListener("DOMContentLoaded", () => {
+        const size = new URLSearchParams(window.location.search).get("size");
+        document.getElementById("size").value = size;
+        startGame();
         document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
     });
@@ -304,7 +246,7 @@ body {
       }
 
       function render4dHexGrid(cells) {
-        storedCells = cells;
+        localStorage.setItem("storedCells", JSON.stringify(cells));
         var c = document.getElementById("myCanvas");
         var ctx = c.getContext("2d");
         ctx.strokeStyle = "black";
@@ -366,16 +308,42 @@ body {
 
         for (let i = 0; i < cells.length; i++) {
           for (let j = 0; j < cells[i].length; j++) {
-            x = centerX + (((i - j) * hexSize * .75) * (boardSize + 1.5))
-            y = centerY + (((i + j) * hexSize * .43) * (boardSize + 1)) - ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
+            x = centerX - (((i - j) * hexSize * .75) * (boardSize + 1.5))
+            y = centerY - (((i + j) * hexSize * .43) * (boardSize + 1)) + ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
             render2dHexGrid(cells[i][j], x, y, ctx, axes);
           }
         }
+
+        markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
+        markedCoords.forEach(coord => {
+          center = Center(coord);
+          if (storedCells[coord[0]][coord[1]][coord[2]][coord[3]] !== 0){
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, hexSize / 4, 0, 2 * Math.PI);
+            ctx.fillStyle = "yellow";
+            ctx.fill();
+          }
+          else {
+            genHex(center.x, center.y, ctx);
+            ctx.fillStyle = "yellow";
+            ctx.fill();
+            ctx.stroke();
+          }  
+        });
         
         
     }
 
       async function playAt(coords) {
+        storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
+
+        if (marking){
+          mark(coords);
+          return;
+        }
+        if (storedCells[coords[0]][coords[1]][coords[2]][coords[3]] !== 0){
+          return;
+        }
 
         if (gameOver || !userId) return;
 
@@ -407,11 +375,11 @@ body {
 
         if (data.victory) {
           gameOver = true;
-          document.getElementById("winner").innerHTML = "Player " + (-data.player) + " has won!";
+          victory(-data.player);
         }
       }
 
-      async function mark(btn, coords){
+      async function mark(coords){
         if (!marking) {return;}
         for (let i = 0; i < markedCoords.length; i++) {
             if (markedCoords[i][0] === coords[0] && markedCoords[i][1] === coords[1] && markedCoords[i][2] === coords[2] && markedCoords[i][3] === coords[3]) {
@@ -447,9 +415,9 @@ body {
             return;
           }
 
-      function center(coords){
-        subCenterX = centerX + (((coords[0] - coords[1]) * hexSize * .75) * (boardSize + 1.5))
-        subCenterY = centerY + (((coords[0] + coords[1]) * hexSize * .43) * (boardSize + 1)) - ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
+      function Center(coords){
+        subCenterX = centerX - (((coords[0] - coords[1]) * hexSize * .75) * (boardSize + 1.5))
+        subCenterY = centerY - (((coords[0] + coords[1]) * hexSize * .43) * (boardSize + 1)) + ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
         x = subCenterX + ((coords[2] - coords[3]) * hexSize * .75)
         y = subCenterY + ((coords[2] + coords[3]) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
         return {
@@ -474,8 +442,8 @@ body {
 
         const data = await response.json();
         data.edges.forEach(edge => {
-            center1 = center(edge[0]);
-            center2 = center(edge[1]);
+            center1 = Center(edge[0]);
+            center2 = Center(edge[1]);
             ctx.strokeStyle = player === 1 ? '#060359' : '#590303';
             ctx.beginPath();
             ctx.moveTo(center1.x, center1.y);
@@ -496,9 +464,9 @@ body {
         }
         const data = await response.json();
         data.triangles.forEach(triangle => {
-            center1 = center(triangle[0]);
-            center2 = center(triangle[1]);
-            center3 = center(triangle[2]);
+            center1 = Center(triangle[0]);
+            center2 = Center(triangle[1]);
+            center3 = Center(triangle[2]);
             ctx.beginPath();
             ctx.moveTo(center1.x, center1.y);
             ctx.lineTo(center2.x, center2.y);
@@ -512,11 +480,11 @@ body {
       }
 
       function clearEdges() {
+        storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
         render4dHexGrid(storedCells);
       }
 
-      async function startGame(event) {
-        event.preventDefault();
+      async function startGame() {
         clearMarking();
 
         if (marking){
@@ -568,22 +536,25 @@ body {
     c = document.getElementById("myCanvas");
     ctx = c.getContext("2d");
 
+    if (!add) {
+      storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
+    }
     for (let i = 0; i < adj.length; i++) {
-        center = center(adj[i]);
-        genHex(center.x, center.y, ctx);
-        ctx.fillStyle = localPlayer === 1 ? 'rgba(6, 3, 89, 0.2)' : 'rgba(89, 3, 3, 0.2)';
+        center = Center(adj[i]);
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, hexSize / 4, 0, 2 * Math.PI);
+        if (add) {
+          ctx.fillStyle = localPlayer === 1 ? '#b1d2f9' : '#f9b8b1';
+          ctx.fill();
         }
-        
+        else {
+          playerHere = storedCells[adj[i][0]][adj[i][1]][adj[i][2]][adj[i][3]];
+          if (playerHere === 0) {ctx.fillStyle = 'e8e8e8';}
+          else {ctx.fillStyle = playerHere === 1 ? "blue" : playerHere === -1;}
+          ctx.fill();
+        }
       }
-
-      function getCenter(btn, wrapper) {
-      const btnRect = btn.getBoundingClientRect();
-      const wrapRect = wrapper.getBoundingClientRect();
-      return {
-        x: (btnRect.left + btnRect.width / 2) - wrapRect.left,
-        y: (btnRect.top + btnRect.height / 2) - wrapRect.top,
-    };
-}
+      }
 
     function renderAxisButtons(){
         axisNames = ["U", "V", "X", "Y"]
@@ -718,6 +689,24 @@ async function newOrder(newOrder){
     render4dHexGrid(data.board);
     renderAxisButtons();
 }
+
+function victory(player){
+  gameOver = true;
+  c = document.getElementById("myCanvas");
+  ctx = c.getContext("2d");
+  ctx.fillStyle = player === 1 ? "blue" : "red";
+  ctx.fillRect(centerX - 400, centerY - 70, 800, 140);
+  ctx.font = "100px Arial";
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  if (player === 1){
+    ctx.fillText("Blue has won!", centerX, centerY);
+  }
+  else {
+    ctx.fillText("Red has won!", centerX, centerY);
+  }
+}
     </script>
   </head>
   <body>
@@ -756,7 +745,7 @@ async function newOrder(newOrder){
     <span id="error"></span>
 
     <div id="boardWrapper" style="position: relative;">
-        <canvas id="myCanvas" width="1600" height="1000"></canvas>
+        <canvas id="myCanvas" width="1700" height="1000"></canvas>
         <svg id="edgeLayer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></svg>
       </div>
     <p><span id="winner"></span></p>
