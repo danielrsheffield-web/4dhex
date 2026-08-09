@@ -188,29 +188,29 @@ body {
         const mouseY = e.clientY - rect.top;
 
 
-        if (currentHex.length === 0){
-            coords = findHex4d(mouseX, mouseY, ctx);
-            currentHex = coords;
-            document.getElementById("error").innerHTML = "Current Hex: " + currentHex.join(", ");
-            return;
+        if (currentHex.length !== 0){
+            center = Center(currentHex);
+            x = center.x;
+            y = center.y;
+            genHex(x, y, ctx);
+            if (ctx.isPointInPath(mouseX, mouseY)){
+                return;
+            }
         }
-        center = Center(currentHex);
-        x = center.x;
-        y = center.y;
-        genHex(x, y, ctx);
-        if (ctx.isPointInPath(mouseX, mouseY)){
-            return;
-        }
-        if (!ctx.isPointInPath(mouseX, mouseY)){
+        
             coords = findHex4d(mouseX, mouseY, ctx);
             storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
-            render4dHexGrid(storedCells);
-            if (coords.length === 0) {return;}
+            render4dHexGrid(storedCells, false);
             currentHex = coords;
             localStorage.setItem("currentHex", JSON.stringify(currentHex));
+            if (coords.length === 0) {renderEdges();
+                renderTriangles();
+                return;}
+            
             renderAdj(currentHex, true);
+            renderEdges();
+            renderTriangles();
             return;
-        }
 
     }
 
@@ -245,8 +245,9 @@ body {
         ctx.stroke();
       }
 
-      function render4dHexGrid(cells) {
+      function render4dHexGrid(cells, incOthers = true) {
         localStorage.setItem("storedCells", JSON.stringify(cells));
+        storedCells = cells;
         var c = document.getElementById("myCanvas");
         var ctx = c.getContext("2d");
         ctx.strokeStyle = "black";
@@ -330,12 +331,16 @@ body {
             ctx.stroke();
           }  
         });
-        
-        
+        if (incOthers){
+          renderTriangles();
+          renderEdges();
+        }
     }
 
       async function playAt(coords) {
         storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
+        localStorage.setItem("triangles", JSON.stringify([]));
+        localStorage.setItem("edges", JSON.stringify([]));
 
         if (marking){
           mark(coords);
@@ -441,14 +446,20 @@ body {
 
 
         const data = await response.json();
-        data.edges.forEach(edge => {
-            center1 = Center(edge[0]);
-            center2 = Center(edge[1]);
-            ctx.strokeStyle = player === 1 ? '#060359' : '#590303';
-            ctx.beginPath();
-            ctx.moveTo(center1.x, center1.y);
-            ctx.lineTo(center2.x, center2.y);
-            ctx.stroke();
+        localStorage.setItem("edges", JSON.stringify(data.edges));
+        renderEdges();
+      }
+
+      function renderEdges() {
+        ctx = document.getElementById("myCanvas").getContext("2d");
+        edges = JSON.parse(localStorage.getItem("edges") || "[]");
+        edges.forEach(edge => {
+          center1 = Center(edge[0]);
+          center2 = Center(edge[1]);
+          ctx.beginPath();
+          ctx.moveTo(center1.x, center1.y);
+          ctx.lineTo(center2.x, center2.y);
+          ctx.stroke();
         })
       }
 
@@ -463,29 +474,39 @@ body {
           return;
         }
         const data = await response.json();
-        data.triangles.forEach(triangle => {
-            center1 = Center(triangle[0]);
-            center2 = Center(triangle[1]);
-            center3 = Center(triangle[2]);
-            ctx.beginPath();
-            ctx.moveTo(center1.x, center1.y);
-            ctx.lineTo(center2.x, center2.y);
-            ctx.lineTo(center3.x, center3.y);
-            ctx.closePath();
-            ctx.fillStyle = player === 1 ? 'rgba(6, 3, 89, 0.2)' : 'rgba(89, 3, 3, 0.2)';
-            ctx.fill();
-            ctx.strokeStyle = player === 1 ? '#060359' : '#590303';
-            ctx.stroke();
+        localStorage.setItem("triangles", JSON.stringify(data.triangles));
+        renderTriangles();
+      }
+
+      function renderTriangles() {
+        ctx = document.getElementById("myCanvas").getContext("2d");
+        triangles = JSON.parse(localStorage.getItem("triangles") || "[]");
+        triangles.forEach(triangle => {
+          center1 = Center(triangle[0]);
+          center2 = Center(triangle[1]);
+          center3 = Center(triangle[2]);
+          ctx.beginPath();
+          ctx.moveTo(center1.x, center1.y);
+          ctx.lineTo(center2.x, center2.y);
+          ctx.lineTo(center3.x, center3.y);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+          ctx.fill();
+          ctx.strokeStyle = '#000000';
+          ctx.stroke();
         })
       }
 
       function clearEdges() {
+        localStorage.setItem("edges", JSON.stringify([]));
+        localStorage.setItem("triangles", JSON.stringify([]));
         storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
         render4dHexGrid(storedCells);
       }
 
       async function startGame() {
         clearMarking();
+        clearEdges();
 
         if (marking){
             toggleMarking();
@@ -518,29 +539,44 @@ body {
         renderAxisButtons();
       }
 
+      function adjInit(coords) {
+        pos = adjBuild(coords, 0, 1);
+        neg = adjBuild(coords, 0, -1);
+        return pos.concat(neg);
+      }
+
+      function adjBuild(coords, start, sign) {
+        if (start === 4){
+            return [coords];
+        }
+        let unmod = adjBuild(coords, start + 1, sign);
+        let newCoords = [0,0,0,0]
+        for (let i = 0; i < coords.length; i++){
+            if (i !== start){
+                newCoords[i] = coords[i];
+            }
+            else {
+                newCoords[i] = coords[i] + sign;
+            }
+        }
+        if (newCoords[start] < 0 || newCoords[start] >= boardSize){
+          return unmod;
+        }
+        let mod = adjBuild(newCoords, start + 1, sign);
+        return unmod.concat(mod);
+      }
+
       async function renderAdj(coords, add) {
-        const response = await fetch("/renderAdj", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ coords: coords, user_id: userId }),
-        }
-        );
-        if (!response.ok) {
-          document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
-          return;
-        }
-        const data = await response.json();
-    adj = data.adj;
-    adj.push(coords);
+        adj = adjInit(coords);
 
-    c = document.getElementById("myCanvas");
-    ctx = c.getContext("2d");
+        let c = document.getElementById("myCanvas");
+        let ctx = c.getContext("2d");
 
-    if (!add) {
-      storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
-    }
-    for (let i = 0; i < adj.length; i++) {
-        center = Center(adj[i]);
+        if (!add) {
+            let storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
+        }
+        for (let i = 0; i < adj.length; i++) {
+            let center = Center(adj[i]);
         ctx.beginPath();
         ctx.arc(center.x, center.y, hexSize / 4, 0, 2 * Math.PI);
         if (add) {
@@ -577,6 +613,8 @@ body {
 
 
 async function changeAxis(i, m){
+    localStorage.setItem("edges", JSON.stringify([]));
+    localStorage.setItem("triangles", JSON.stringify([]));
 
     dummy = coordOrder[m];
     coordOrder[m] = coordOrder[i];
@@ -619,19 +657,6 @@ async function recoverGame(){
     renderAxisButtons();
 }
 
-function drawTriangle(p1, p2, p3, player) {
-  const edgeLayer = document.getElementById('edgeLayer');
-  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-  poly.setAttribute(
-    'points',
-    `${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`
-  );
-  poly.setAttribute('fill', player === 1 ? 'rgba(6, 3, 89, 0.2)' : 'rgba(89, 3, 3, 0.2)');
-  poly.setAttribute('stroke', player === 1 ? '#060359' : '#590303');
-  poly.setAttribute('stroke-width', '2');
-  edgeLayer.appendChild(poly);
-}
-
 function toggleMarking() {
   marking = !marking;
   localStorage.setItem("marking", marking);
@@ -661,6 +686,8 @@ async function clearMarking() {
 }
 
 async function newOrder(newOrder){
+    localStorage.setItem("edges", JSON.stringify([]));
+    localStorage.setItem("triangles", JSON.stringify([]));
     oldOrder = coordOrder;
     coordOrder = newOrder;
     localStorage.setItem("coordOrder", JSON.stringify(coordOrder));
@@ -695,16 +722,16 @@ function victory(player){
   c = document.getElementById("myCanvas");
   ctx = c.getContext("2d");
   ctx.fillStyle = player === 1 ? "blue" : "red";
-  ctx.fillRect(centerX - 400, centerY - 70, 800, 140);
+  ctx.fillRect(centerX - 400, 0, 800, 140);
   ctx.font = "100px Arial";
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (player === 1){
-    ctx.fillText("Blue has won!", centerX, centerY);
+    ctx.fillText("Blue has won!", centerX, 70);
   }
   else {
-    ctx.fillText("Red has won!", centerX, centerY);
+    ctx.fillText("Red has won!", centerX, 70);
   }
 }
     </script>
