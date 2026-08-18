@@ -393,7 +393,7 @@ body {
               const response = await fetch("/getBoard4d", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: userId, coordOrder: coordOrder, markedCoords: markedCoords }),
+              body: JSON.stringify({ user_id: userId, coordOrder: coordOrder}),
               });
             if (!response.ok) {
             document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
@@ -409,7 +409,7 @@ body {
         const response = await fetch("/getBoard4d", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: userId, coordOrder: coordOrder, markedCoords: markedCoords }),
+              body: JSON.stringify({ user_id: userId, coordOrder: coordOrder}),
               });
             if (!response.ok) {
             document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
@@ -663,12 +663,6 @@ async function clearMarking() {
 }
 
 async function newOrder(choice){
-    if (document.getElementById("error").innerHTML !== "") {
-        document.getElementById("error").innerHTML = "Newer Order!";
-    }
-    else {
-        document.getElementById("error").innerHTML = "New Order!";
-    }
     
     if (choice === 1){
         nextOrder = [0,2,1,3];
