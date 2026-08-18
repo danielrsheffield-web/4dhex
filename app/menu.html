@@ -2,8 +2,28 @@
 <html>
   <head>
     <title>Choose Coordinates</title>
+    <style>
+        #container
+{
+  height: 1000px;
+  position: relative;
+  width: 1700px;
+}
+#myCanvas
+{
+  height: 100%;
+  width: 100%;
+}
+#controls
+{
+  bottom: 500px;
+  left: 850px;
+  position: absolute;
+  width: 100%;
+}
+    </style>
     <script>
-
+        const hexSize = 50;
         async function localMult(event) {
             event.preventDefault();
             const size = document.getElementById("size").value;
@@ -15,29 +35,167 @@
             const size = document.getElementById("size").value;
             window.location.href = "/botGame?size=" + size + "&bot=" + bot;
         }
+
+
+    function render4dHexGrid() {
+        var c = document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
+        ctx.strokeStyle = "black";
+
+        axes = [1, -1, 1, -1];
+
+        ctx.clearRect(0, 0, c.width, c.height);
+
+        centerX = c.width / 2;
+        centerY = c.height / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY - ((4 + .5) * (4 + 1) * hexSize * .43));
+        ctx.lineTo(centerX - ((4 + 1) * hexSize * .75), centerY - ((4 + .5) * (4 + 1) * hexSize * .43));
+        ctx.lineTo(centerX - (4 * (4 + 1.5) * hexSize * .75), centerY);
+        ctx.lineTo(centerX, centerY);
+        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY + ((4 + .5) * (4 + 1) * hexSize * .43));
+        ctx.lineTo(centerX + ((4 + 1) * hexSize * .75), centerY + ((4 + .5) * (4 + 1) * hexSize * .43));
+        ctx.lineTo(centerX + (4 * (4 + 1.5) * hexSize * .75), centerY);
+        ctx.lineTo(centerX, centerY);
+        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY - ((4 + .5) * (4 + 1) * hexSize * .43));
+        ctx.lineTo(centerX + ((4 + 1) * hexSize * .75), centerY - ((4 + .5) * (4 + 1) * hexSize * .43));
+        ctx.lineTo(centerX + (4 * (4 + 1.5) * hexSize * .75), centerY);
+        ctx.lineTo(centerX, centerY);
+        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY + ((4 + .5) * (4 + 1) * hexSize * .43));
+        ctx.lineTo(centerX - ((4 + 1) * hexSize * .75), centerY + ((4 + .5) * (4 + 1) * hexSize * .43));
+        ctx.lineTo(centerX - (4 * (4 + 1.5) * hexSize * .75), centerY);
+        ctx.lineTo(centerX, centerY);
+        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0; j < 4; j++) {
+            x = centerX + (((i - j) * hexSize * .75) * (4 + 1.5))
+            y = centerY + (((i + j) * hexSize * .43) * (4 + 1)) - ((4 - 1) * (4 + 1) * hexSize * .43)
+            render2dHexGrid(x, y, ctx, axes);
+          }
+        }
+
+        function render2dHexGrid(baseX, baseY, ctx, axes) {
+
+            ctx.beginPath();
+            ctx.moveTo(baseX, baseY);
+            ctx.lineTo(baseX, baseY - ((4 + 1) * hexSize * .43));
+            ctx.lineTo(baseX - (hexSize * .75), baseY - ((4 + 1) * hexSize * .43));
+            ctx.lineTo(baseX - ((4 + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+            ctx.lineTo(baseX, baseY + ((4 + 1) * hexSize * .43));
+            ctx.lineTo(baseX + (hexSize * .75), baseY + ((4 + 1) * hexSize * .43));
+            ctx.lineTo(baseX + ((4 + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY + ((4 + 1) * hexSize * .43));
+        ctx.lineTo(baseX - (hexSize * .75), baseY + ((4 + 1) * hexSize * .43));
+        ctx.lineTo(baseX - ((4 + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(baseX, baseY - ((4 + 1) * hexSize * .43));
+        ctx.lineTo(baseX + (hexSize * .75), baseY - ((4 + 1) * hexSize * .43));
+        ctx.lineTo(baseX + ((4 + .5) * hexSize * .75), baseY);
+        ctx.lineTo(baseX, baseY);
+        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fill();
+        ctx.stroke();
+
+            for (let i = 0; i < 4; i++) {
+              for (let j = 0; j < 4; j++) {
+                x = baseX + ((i - j) * hexSize * .75)
+                y = baseY + ((i + j) * hexSize * .43) - ((4 - 1) * hexSize * .43)
+                drawHex(x, y, ctx);
+              }
+            }
+        }
+
+    }
+
+    function genHex(x, y, ctx) {
+        ctx.beginPath();
+        ctx.moveTo(x + (hexSize / 4), y - (hexSize * .43));
+        ctx.lineTo(x + (hexSize / 2), y);
+        ctx.lineTo(x + (hexSize / 4), y + (hexSize * .43));
+        ctx.lineTo(x - (hexSize / 4), y + (hexSize * .43));
+        ctx.lineTo(x - (hexSize / 2), y);
+        ctx.lineTo(x - (hexSize / 4), y - (hexSize * .43));
+        ctx.closePath();
+      }
+
+
+
+      function drawHex(x, y, ctx) {
+        genHex(x, y, ctx);
+        ctx.fillStyle = "#e8e8e8";
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        render4dHexGrid();
+    });
     </script>
   </head>
   <body>
-    <p>Board:<br><span id="board"></span></p>
-    
-    <p>Coordinates: <span id="number">[0,0]</span></p>
-    <p>Player: <span id="player"></span></p>
-        <form onsubmit = "localMult(event)">
-            <label for="fname">Size:</label>
-            <input type="text" id="size" name="size" size="4">
-            <input type="submit" value="Submit">
-        </form>
-        <form onsubmit = "botGame(event, 1)">
-            <label for="fname">Bot 1:</label>
-            <input type="text" id="size" name="size" size="4">
-            <input type="submit" value="Submit">
-        </form>
-        <form onsubmit = "botGame(event, -1)">
-            <label for="fname">Bot -1:</label>
-            <input type="text" id="bot" name="bot" size="4">
-            <input type="submit" value="Submit">
-        </form>
+      <div id = "container">
+        <canvas id="myCanvas" width="1700" height="1000"></canvas>
+        <div id="controls">
+            <form onsubmit = "localMult(event)">
+                <label for="fname">Size:</label>
+                <input type="text" id="size" name="size" size="4">
+                <input type="submit" value="Submit">
+            </form>
+            <form onsubmit = "botGame(event, 1)">
+                <label for="fname">Bot 1:</label>
+                <input type="text" id="size" name="size" size="4">
+                <input type="submit" value="Submit">
+            </form>
+            <form onsubmit = "botGame(event, -1)">
+                <label for="fname">Bot -1:</label>
+                <input type="text" id="bot" name="bot" size="4">
+                <input type="submit" value="Submit">
+            </form>
+        </div>
 
-      <p><span id="winner"></span></p>
+      </div>
   </body>
 </html>

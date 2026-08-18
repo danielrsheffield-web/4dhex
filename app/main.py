@@ -217,8 +217,6 @@ def play4d(data: PlayRequest):
     rearrangedCoords = [0,0,0,0]
     for i in range(len(data.coordOrder)):
         rearrangedCoords[data.coordOrder[i]] = data.coords[i]
-    print(data.coordOrder)
-    print(rearrangedCoords)
     for value in rearrangedCoords:
         subBoard = subBoard[value]
     if board.get("player") == 1:
