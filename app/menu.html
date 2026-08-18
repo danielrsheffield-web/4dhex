@@ -179,21 +179,7 @@
       <div id = "container">
         <canvas id="myCanvas" width="1700" height="1000"></canvas>
         <div id="controls">
-            <form onsubmit = "localMult(event)">
-                <label for="fname">Size:</label>
-                <input type="text" id="size" name="size" size="4">
-                <input type="submit" value="Submit">
-            </form>
-            <form onsubmit = "botGame(event, 1)">
-                <label for="fname">Bot 1:</label>
-                <input type="text" id="size" name="size" size="4">
-                <input type="submit" value="Submit">
-            </form>
-            <form onsubmit = "botGame(event, -1)">
-                <label for="fname">Bot -1:</label>
-                <input type="text" id="bot" name="bot" size="4">
-                <input type="submit" value="Submit">
-            </form>
+            <button onclick="window.location.href = '/localMultiplayer'">Local Game</button>
         </div>
 
       </div>

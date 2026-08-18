@@ -246,6 +246,7 @@ body {
       }
 
       function render4dHexGrid(cells, incOthers = true) {
+        if (!cells){return;}
         localStorage.setItem("storedCells", JSON.stringify(cells));
         storedCells = cells;
         var c = document.getElementById("myCanvas");
