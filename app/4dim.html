@@ -506,6 +506,7 @@ body {
       }
 
       async function startGame() {
+        localStorage.setItem("storedCells", JSON.stringify([]));
         clearMarking();
         clearEdges();
 
