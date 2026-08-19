@@ -8,16 +8,12 @@ import uuid
 
 app = FastAPI(title="Hex")
 
-# Hash table: user_id -> board (each user get own board cave)
+# Hash table: user_id -> board
 user_boards: dict[str, list] = {}
 
-@app.get("/")
-def read_root():
-    return {"message": "Hello from your Python web app!"}
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
+@app.get("/", response_class = HTMLResponse)
+def menu():
+    return FileResponse("app/menu.html")
 
 @app.get("/2dGame", response_class = HTMLResponse)
 def twoDim():
@@ -34,10 +30,6 @@ def fourDim():
 @app.get("/alt4dGame", response_class = HTMLResponse)
 def altFourDim():
     return FileResponse("app/alt4dim.html")
-
-@app.get("/menu", response_class = HTMLResponse)
-def menu():
-    return FileResponse("app/menu.html")
 
 @app.get("/localMultiplayer", response_class = HTMLResponse)
 def localMultiplayer():
@@ -139,6 +131,12 @@ def start_2d_game(data: StartGameRequest):
     textBoard = boardTextRep(board.get("space"))
     arrayBoard = boardToArray(board.get("space"))
     return {"user_id": user_id, "textBoard": textBoard, "cells": arrayBoard, "player": board.get("player"), "posCells": board.get("posCells"), "negCells": board.get("negCells"), "posEdges": board.get("posEdges"), "negEdges": board.get("negEdges"), "boundSet": board.get("boundSet")}
+
+@app.get("/getId")
+def getId():
+    user_id = str(uuid.uuid4())
+    print("generated id: " + user_id)
+    return {"user_id": user_id}
 
 @app.post("/start4dGame")
 def start_4d_game(data: StartGameRequest):

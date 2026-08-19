@@ -53,7 +53,7 @@ body {
 }
     </style>
     <script>
-      let userId = localStorage.getItem("userId");
+      let gameId = new URLSearchParams(window.location.search).get("game_id");
       let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
       let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
       let marking = JSON.parse(localStorage.getItem("marking") || "false");
@@ -351,12 +351,12 @@ body {
           return;
         }
 
-        if (gameOver || !userId) return;
+        if (gameOver || !gameId) return;
 
         const response = await fetch("/play4d", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ coords: coords, user_id: userId, coordOrder: coordOrder }),
+          body: JSON.stringify({ coords: coords, user_id: gameId, coordOrder: coordOrder }),
         });
 
         if (!response.ok) {
@@ -394,7 +394,7 @@ body {
               const response = await fetch("/getBoard4d", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: userId, coordOrder: coordOrder}),
+              body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
               });
             if (!response.ok) {
             document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
@@ -410,7 +410,7 @@ body {
         const response = await fetch("/getBoard4d", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: userId, coordOrder: coordOrder}),
+              body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
               });
             if (!response.ok) {
             document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
@@ -436,7 +436,7 @@ body {
         const response = await fetch("/getEdges", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, coordOrder: coordOrder, player: player }),
+          body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder, player: player }),
         });
         if (!response.ok) {
           document.getElementById("error").innerHTML = "Server error: " + response.status;
@@ -468,7 +468,7 @@ body {
         const response = await fetch("/getTriangles", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, coordOrder: coordOrder, player: player }),
+          body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder, player: player }),
         });
         if (!response.ok) {
           document.getElementById("error").innerHTML = "Server error: " + response.status;
@@ -520,7 +520,7 @@ body {
         const response = await fetch("/start4dGame", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, size: boardSize, coordOrder: coordOrder }),
+          body: JSON.stringify({ user_id: gameId, size: boardSize, coordOrder: coordOrder }),
         });
 
         if (!response.ok) {
@@ -529,8 +529,8 @@ body {
         }
 
         const data = await response.json();
-        userId = data.user_id;
-        localStorage.setItem("userId", userId);
+        gameId = data.user_id;
+        localStorage.setItem("gameId", gameId);
         render4dHexGrid(data.cells);
         document.getElementById("winner").innerHTML = "";
         document.getElementById("player").innerHTML = "Blue";
@@ -612,7 +612,7 @@ async function changeAxis(i, m){
     const response = await fetch("/getBoard4d", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId, coordOrder: coordOrder }),
+    body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder }),
     });
     if (!response.ok) {
       document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
@@ -626,7 +626,7 @@ async function recoverGame(){
     const response = await fetch("/getBoard4d", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId, coordOrder: coordOrder }),
+    body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder }),
     });
     if (!response.ok) {
       document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
@@ -653,7 +653,7 @@ async function clearMarking() {
   const response = await fetch("/getBoard4d", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId, coordOrder: coordOrder }),
+    body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder }),
     });
     if (!response.ok) {
       document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
@@ -694,7 +694,7 @@ async function newOrder(choice){
     const response = await fetch("/getBoard4d", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId, coordOrder: coordOrder }),
+    body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder }),
     });
     if (!response.ok) {
       document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;

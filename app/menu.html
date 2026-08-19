@@ -3,7 +3,16 @@
   <head>
     <title>Choose Coordinates</title>
     <style>
-        #container
+    :root {
+  --menu-bg: #565656;
+  --menu-btn-bg: #e8e8e8;
+  --menu-btn-hover: #d0d0d0;
+  --menu-btn-text: #222;
+  --menu-blue: #0f72e2;
+  --menu-red: #d20d0d;
+  --menu-radius: 6px;
+}
+     #container
 {
   height: 1000px;
   position: relative;
@@ -14,27 +23,80 @@
   height: 100%;
   width: 100%;
 }
-#controls
-{
+#overlay {
   bottom: 500px;
-  left: 850px;
+  left: 690px;
   position: absolute;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;           
+  width: 320px;
+  align-items: center;
+}
+#controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;           
+  width: 200px;       
+}
+.main-btn {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 2px solid #222;
+    background-color: #e8e8e8;
+    color: #222;
+    font-size: 16px;
+    font-weight: bold;
+}
+.size-btn {
+    width: 20%;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 2px solid #222;
+    background-color: #e8e8e8;
+    color: #222;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    margin-right: 7px;
+}
+#title {
+    width: 320px;
+    height: 100px;
+    font-size: 96px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 16px;
+    background-color: #fff;
+    border-radius: 6px;
+    border: 2px solid #222;
+    color: #000
+
 }
     </style>
     <script>
         const hexSize = 50;
-        async function localMult(event) {
-            event.preventDefault();
-            const size = document.getElementById("size").value;
-            window.location.href = "/localMultiplayer?size=" + size;
+        let size = 2;
+
+        function setSize(newSize) {
+            document.getElementById("size-btn-" + size).style.backgroundColor = "#e8e8e8";
+            document.getElementById("size-btn-" + newSize).style.backgroundColor = "#ccc";
+            size = newSize;
         }
 
-        async function botGame(event, bot) {
-            event.preventDefault();
-            const size = document.getElementById("size").value;
-            window.location.href = "/botGame?size=" + size + "&bot=" + bot;
+
+        async function localGame() {
+            const response = await fetch("/getId");
+            const data = await response.json();
+            window.location.href = "/localMultiplayer?size=" + size + "&game_id=" + data.user_id;
         }
+
+
+
 
 
     function render4dHexGrid() {
@@ -178,10 +240,21 @@
   <body>
       <div id = "container">
         <canvas id="myCanvas" width="1700" height="1000"></canvas>
-        <div id="controls">
-            <button onclick="window.location.href = '/localMultiplayer'">Local Game</button>
+        <div id = "overlay">
+            <div id = "title">
+                4d Hex
+            </div>
+        <div id = "controls">
+            <div id = "size-buttons">
+            <button class="size-btn" onclick="setSize(2)" id = "size-btn-2">2</button>
+            <button class="size-btn" onclick="setSize(3)" id = "size-btn-3">3</button>
+            <button class="size-btn" onclick="setSize(4)" id = "size-btn-4">4</button>
+            <button class="size-btn" onclick="setSize(5)" id = "size-btn-5">5</button>
         </div>
-
+            <button class="main-btn" onclick="localGame()">Local Game</button>
+            <button class="main-btn" onclick="onlineGame()">Online Game</button>
+        </div>
+        </div>
       </div>
   </body>
 </html>
