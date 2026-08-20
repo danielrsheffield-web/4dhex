@@ -147,7 +147,9 @@ def joinGame(data: JoinGameRequest):
         board["joined"] = -board["joined"]
     else:
         board["joined"] = random.choice([1, -1])
-    return {"player": board["joined"], "cells": boardTo4dArray(board.get("space"), [0, 1, 2, 3])}
+    cells = boardTo4dArray(board.get("space"), [0, 2, 1, 3])
+    print(cells)
+    return {"player": board["joined"], "cells": cells}
 
 @app.post("/start4dGame")
 def start_4d_game(data: StartGameRequest):
