@@ -51,18 +51,32 @@ body {
   padding: 8px;
   cursor: pointer;
 }
+#TurnDisplay {
+    width: 200px;
+    height: 30px;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border: 2px solid #222;
+    color: #000
+
+}
     </style>
     <script>
       let gameId = new URLSearchParams(window.location.search).get("game_id");
+      let player = Number(new URLSearchParams(window.location.search).get("player"));
       let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
       let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
       let marking = JSON.parse(localStorage.getItem("marking") || "false");
       let gameOver = false;
-      let localPlayer = 0;
-      let boardSize = 0;
+      let curPlayer = 0;
+      let boardSize = Number(new URLSearchParams(window.location.search).get("size"));
       let hexSize = 50;
       let centerX = 0;
       let centerY = 0;
+      let checking = false;
 
     
     function render2dHexGrid(cells, baseX, baseY, ctx, axes) {
@@ -216,13 +230,51 @@ body {
 
     // listen for mousedown events
     document.addEventListener("DOMContentLoaded", () => {
-        const size = new URLSearchParams(window.location.search).get("size");
-        document.getElementById("size").value = size;
         startGame();
         document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
+        setInterval(checkPlayer, 1000);
     });
 
+    async function checkPlayer() {
+      if (checking) {return;}
+      checking = true;
+      if (player === curPlayer || player === 0) {checking = false; return;}
+      const response = await fetch("/getPlayer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: gameId }),
+      });
+      if (!response.ok) {
+        document.getElementById("error").innerHTML = "Server error: " + response.status;
+        checking = false;
+        return;
+      }
+      const data = await response.json();
+      if (curPlayer === data.player) {checking = false; return;}
+
+      curPlayer = data.player;
+      if (curPlayer === 1) {
+        document.getElementById("player").innerHTML = "Blue";
+        document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+      }
+      else {
+        document.getElementById("player").innerHTML = "Red";
+        document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+      }
+      const response2 = await fetch("/getBoard4d", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder }),
+      });
+      if (!response.ok) {
+        document.getElementById("error").innerHTML = "Server error: " + response.status;
+        return;
+      }
+      const data2 = await response2.json();
+      render4dHexGrid(data.board);
+      checking = false;
+    }
 
 
       function genHex(x, y, ctx) {
@@ -339,6 +391,7 @@ body {
     }
 
       async function playAt(coords) {
+        if (curPlayer === -player){return;}
         storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
         localStorage.setItem("triangles", JSON.stringify([]));
         localStorage.setItem("edges", JSON.stringify([]));
@@ -367,16 +420,20 @@ body {
         const data = await response.json();
         render4dHexGrid(data.cells);
         if (data.player === 1){
-          localPlayer = 1;
+          curPlayer = 1;
           document.getElementById("player").innerHTML = "Blue";
-          const sidebar = document.querySelector(".sidebar");
-          sidebar.style.setProperty("background-color", "#0f72e2");
+          document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+          if (player === 0){
+            document.getElementById("sidebar").style.backgroundColor = "#0f72e2";
+          }
         }
         else{
-          localPlayer = -1;
+          curPlayer = -1;
           document.getElementById("player").innerHTML = "Red";
-          const sidebar = document.querySelector(".sidebar");
-          sidebar.style.setProperty("background-color", "#d20d0d");
+          document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+          if (player === 0){
+            document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
+          }
         }
 
         if (data.victory) {
@@ -506,38 +563,16 @@ body {
       }
 
       async function startGame() {
-        localStorage.setItem("storedCells", JSON.stringify([]));
-        clearMarking();
-        clearEdges();
-
-        if (marking){
-            toggleMarking();
-        }
-
-        boardSize = Number(document.getElementById("size").value);
-
-        gameOver = false;
-        const response = await fetch("/start4dGame", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: gameId, size: boardSize, coordOrder: coordOrder }),
-        });
-
-        if (!response.ok) {
-          document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
-          return;
-        }
-
-        const data = await response.json();
-        gameId = data.user_id;
-        localStorage.setItem("gameId", gameId);
-        render4dHexGrid(data.cells);
-        document.getElementById("winner").innerHTML = "";
         document.getElementById("player").innerHTML = "Blue";
-        localPlayer = 1;
-        localStorage.setItem("localPlayer", localPlayer);
+        curPlayer = 1;
+        localStorage.setItem("curPlayer", curPlayer);
         const sidebar = document.querySelector(".sidebar");
         sidebar.style.setProperty("background-color", "#0f72e2");
+        if (player === -1){
+            sidebar.style.setProperty("background-color", "#d20d0d");
+        }
+        storedCells = JSON.parse(localStorage.getItem("cells") || "[]");
+        render4dHexGrid(storedCells);
       }
 
       function adjInit(coords) {
@@ -581,7 +616,8 @@ body {
         ctx.beginPath();
         ctx.arc(center.x, center.y, hexSize / 4, 0, 2 * Math.PI);
         if (add) {
-          ctx.fillStyle = localPlayer === 1 ? '#b1d2f9' : '#f9b8b1';
+
+          ctx.fillStyle = player === 1 ? '#b1d2f9' : (player === -1 ? '#f9b8b1' : (curPlayer === 1 ? '#b1d2f9' : '#f9b8b1'));
           ctx.fill();
         }
         else {
@@ -737,14 +773,8 @@ function victory(player){
   </head>
   <body>
     <div class="page">
-<aside class="sidebar">
-    <div id="hexGrid"></div>
- <p>Player: <span id="player"></span></p>
-    <form onsubmit = "startGame(event)">
-        <label for="size">Size:</label>
-        <input type="text" id="size" name="size" size="4">
-        <input type="submit" value="Submit">
-      </form>
+<aside class="sidebar" id="sidebar">
+    <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
     
       <button onclick="toggleMarking()">Toggle Marking</button>
       <p><span id="marking"></span></p>

@@ -3,13 +3,14 @@ from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
 from gf2_lin_algebra import GF2Matrix
 from pydantic import BaseModel
-import uuid
+import random
 
 
 app = FastAPI(title="Hex")
 
 # Hash table: user_id -> board
 user_boards: dict[str, list] = {}
+
 
 @app.get("/", response_class = HTMLResponse)
 def menu():
@@ -31,18 +32,13 @@ def fourDim():
 def altFourDim():
     return FileResponse("app/alt4dim.html")
 
-@app.get("/localMultiplayer", response_class = HTMLResponse)
-def localMultiplayer():
+@app.get("/playGame", response_class = HTMLResponse)
+def playGame():
     return FileResponse("app/4dim.html")
 
 class CoordRequest(BaseModel):
     coords: list
     user_id: str
-
-@app.post("/renderAdj")
-def renderAdj(data: CoordRequest):
-    adj = adjInit(data.coords, len(user_boards[data.user_id].get("space")))
-    return {"coords": data.coords, "adj": adj, "player": user_boards[data.user_id].get("player")}
 
 class StartGameRequest(BaseModel):
     size: int
@@ -114,7 +110,7 @@ def getTriangles(data: SetRequest):
 @app.post("/start2dGame")
 def start_2d_game(data: StartGameRequest):
     print("got request")
-    user_id = data.user_id or str(uuid.uuid4())
+    user_id = data.user_id or str(random.randint(0, 1000000))
     top = Hex([], 1)
     bottom = Hex([], 1)
     left = Hex([], -1)
@@ -134,14 +130,29 @@ def start_2d_game(data: StartGameRequest):
 
 @app.get("/getId")
 def getId():
-    user_id = str(uuid.uuid4())
+    user_id = str(random.randint(0, 1000000))
     print("generated id: " + user_id)
     return {"user_id": user_id}
+
+class JoinGameRequest(BaseModel):
+    user_id: str
+
+@app.post("/joinGame")
+def joinGame(data: JoinGameRequest):
+    user_id = data.user_id
+    board = user_boards.get(user_id)
+    if board is None:
+        return {"error": "No board for this user"}
+    if board["joined"] == 1 or board["joined"] == -1:
+        board["joined"] = -board["joined"]
+    else:
+        board["joined"] = random.choice([1, -1])
+    return {"player": board["joined"], "size": len(board["space"])}
 
 @app.post("/start4dGame")
 def start_4d_game(data: StartGameRequest):
     print("got request")
-    user_id = data.user_id or str(uuid.uuid4())
+    user_id = data.user_id or str(random.randint(0, 1000000))
     coordOrder = data.coordOrder or [0, 1, 2, 3]
     zeroBounds = [Hex(["z0"], 1), Hex(["z1"], -1), Hex(["z2"], 1), Hex(["z3"], -1)]
     fullBounds = [Hex(["f0"], 1), Hex(["f1"], -1), Hex(["f2"], 1), Hex(["f3"], -1)]
@@ -166,7 +177,7 @@ def start_4d_game(data: StartGameRequest):
     posSet = {"edges": posEdges, "triangles": posTriangles, "boundEdges": posBoundEdges}
     negSet = {"edges": negEdges, "triangles": negTriangles, "boundEdges": negBoundEdges}
 
-    board = {"space": space, "player": player, "posSet": posSet, "negSet": negSet, "zeroBounds": zeroBounds, "fullBounds": fullBounds, "gameType": "local"}
+    board = {"space": space, "player": player, "posSet": posSet, "negSet": negSet, "zeroBounds": zeroBounds, "fullBounds": fullBounds, "joined": 0}
     user_boards[user_id] = board
     arrayBoard = boardTo4dArray(board.get("space"), coordOrder)
     
@@ -183,7 +194,17 @@ class PlayRequest(BaseModel):
     coords: list
     user_id: str
     coordOrder: list | None = [0, 1, 2, 3]
-    
+
+class PlayerRequest(BaseModel):
+    user_id: str
+
+@app.post("/getPlayer")
+def getPlayer(data: PlayerRequest):
+    board = user_boards.get(data.user_id)
+    if board is None:
+        return {"error": "No board for this user"}
+    return {"player": board.get("player")}
+
 @app.post("/play2d")
 def play2d(data: PlayRequest):
     board = user_boards.get(data.user_id)
