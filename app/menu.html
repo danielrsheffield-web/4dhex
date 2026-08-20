@@ -270,6 +270,7 @@
         const data = await response.json();
         console.log(data);
         localStorage.setItem("cells", JSON.stringify(data.cells));
+        document.getElementById("error").innerHTML = data.cells;
         window.location.href = "/playGame?size=" + data.cells.length + "&game_id=" + game_id + "&player=" + data.player;
     }
     </script>
