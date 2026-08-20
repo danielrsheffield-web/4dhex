@@ -179,7 +179,7 @@ def start_4d_game(data: StartGameRequest):
     posSet = {"edges": posEdges, "triangles": posTriangles, "boundEdges": posBoundEdges}
     negSet = {"edges": negEdges, "triangles": negTriangles, "boundEdges": negBoundEdges}
 
-    board = {"space": space, "player": player, "posSet": posSet, "negSet": negSet, "zeroBounds": zeroBounds, "fullBounds": fullBounds, "joined": 0}
+    board = {"space": space, "player": player, "posSet": posSet, "negSet": negSet, "zeroBounds": zeroBounds, "fullBounds": fullBounds, "joined": 0, "victory": False}
     user_boards[user_id] = board
     arrayBoard = boardTo4dArray(board.get("space"), coordOrder)
     
@@ -247,7 +247,8 @@ def play4d(data: PlayRequest):
     subBoard.changePlayer4d(board.get("player"), board.get("space"), set, board.get("zeroBounds"), board.get("fullBounds"))
     board["player"] = -board.get("player")
     arrayBoard = boardTo4dArray(board.get("space"), data.coordOrder)
-    return {"cells": arrayBoard, "victory": findSurface(set), "player": board.get("player"), "coordOrder": data.coordOrder}
+    board["victory"] = findSurface(set)
+    return {"cells": arrayBoard, "victory": board.get("victory"), "player": board.get("player"), "coordOrder": data.coordOrder}
 
 class BoardRequest(BaseModel):
     user_id: str
@@ -258,7 +259,7 @@ def getBoard4d(data: BoardRequest):
     board = user_boards.get(data.user_id)
     if board is None:
         return {"error": "No board for this user"}
-    return {"board": boardTo4dArray(board.get("space"), data.coordOrder)}
+    return {"board": boardTo4dArray(board.get("space"), data.coordOrder), "victory": board.get("victory")}
 
 def adjBuilder(coords, first, sign, size):
   if first == len(coords):

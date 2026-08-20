@@ -61,6 +61,7 @@ body {
     border-radius: 6px;
     border: 2px solid #222;
     color: #000
+    background-color: #0f72e2;
 
 }
     </style>
@@ -273,6 +274,10 @@ body {
       }
       const data2 = await response2.json();
       render4dHexGrid(data2.board);
+      if (data2.victory) {
+        gameOver = true;
+        victory(-data2.player);
+      }
       checking = false;
     }
 
@@ -391,15 +396,16 @@ body {
     }
 
       async function playAt(coords) {
-        if (curPlayer === -player){return;}
-        storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
-        localStorage.setItem("triangles", JSON.stringify([]));
-        localStorage.setItem("edges", JSON.stringify([]));
-
         if (marking){
           mark(coords);
           return;
         }
+
+        if (curPlayer === -player){return;}
+        storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
+        localStorage.setItem("triangles", JSON.stringify([]));
+        localStorage.setItem("edges", JSON.stringify([]));
+        
         if (storedCells[coords[0]][coords[1]][coords[2]][coords[3]] !== 0){
           return;
         }
@@ -573,6 +579,9 @@ body {
         }
         storedCells = JSON.parse(localStorage.getItem("cells") || "[]");
         render4dHexGrid(storedCells);
+        if (player !== 0){
+          document.getElementById("gameId").innerHTML = "Game ID: " + gameId;
+        }
       }
 
       function adjInit(coords) {
@@ -775,6 +784,7 @@ function victory(player){
     <div class="page">
 <aside class="sidebar" id="sidebar">
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
+    <div id="GameInfo"><span id="gameId"></span></div>
     
       <button onclick="toggleMarking()">Toggle Marking</button>
       <p><span id="marking"></span></p>

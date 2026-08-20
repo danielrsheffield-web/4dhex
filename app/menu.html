@@ -256,11 +256,10 @@
             const data2 = await response2.json();
             localStorage.setItem("cells", JSON.stringify(data2.cells));
             document.getElementById("game-id-input").value = data.user_id;
-            document.getElementById("join-btn").innerHTML = "Begin";
+            joinGame(true);
     }
 
-    async function joinGame(event) {
-        event.preventDefault();
+    async function joinGame() {
         const game_id = String(document.getElementById("game-id-input").value);
         const response = await fetch("/joinGame", {
             method: "POST",
@@ -270,6 +269,13 @@
         const data = await response.json();
         localStorage.setItem("cells", JSON.stringify(data.cells));
         window.location.href = "/playGame?size=" + data.cells.length + "&game_id=" + game_id + "&player=" + data.player;
+    }
+
+    function startJoin() {
+        if (document.getElementById("game-id-input").style.visibility === "visible") {
+            joinGame();
+        }
+        document.getElementById("game-id-input").style.visibility = "visible";
     }
     </script>
   </head>
@@ -289,10 +295,9 @@
         </div>
             <button class="main-btn" onclick="localGame()">Local Game</button>
             <button class="main-btn" onclick="onlineGame()">Host Game</button>
-            <form onsubmit="joinGame(event)">
-                <button class="main-btn" type="submit" id = "join-btn">Join Game</button>
-                <label for="game-id-input">Game Code:</label>
-                <input type="text" name="game_id" placeholder="Game ID" id = "game-id-input">
+            <button class="main-btn" onclick="startJoin()">Join Game</button>
+            <form>
+                <input style="visibility: hidden;" type="text" name="game_id" placeholder="Game Code" id = "game-id-input" style="font-size: 16px;">
             </form>
         </div>
         </div>
