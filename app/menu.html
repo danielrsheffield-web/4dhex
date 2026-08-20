@@ -80,7 +80,7 @@
     </style>
     <script>
         const hexSize = 50;
-        let size = 2;
+        let size = 3;
 
         function setSize(newSize) {
             document.getElementById("size-btn-" + size).style.backgroundColor = "#e8e8e8";
@@ -242,6 +242,7 @@
 
       document.addEventListener("DOMContentLoaded", () => {
         render4dHexGrid();
+        document.getElementById("size-btn-3").style.backgroundColor = "#ccc";
     });
 
     async function onlineGame() {
