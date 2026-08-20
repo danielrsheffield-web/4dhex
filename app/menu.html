@@ -269,7 +269,8 @@
         });
         const data = await response.json();
         console.log(data);
-        window.location.href = "/playGame?size=" + data.size + "&game_id=" + game_id + "&player=" + data.player;
+        localStorage.setItem("cells", JSON.stringify(data.cells));
+        window.location.href = "/playGame?size=" + data.cells.length + "&game_id=" + game_id + "&player=" + data.player;
     }
     </script>
   </head>
