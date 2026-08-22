@@ -16,25 +16,13 @@ user_boards: dict[str, list] = {}
 def menu():
     return FileResponse("app/menu.html")
 
-@app.get("/2dGame", response_class = HTMLResponse)
-def twoDim():
-    return FileResponse("app/2dim.html")
-
-@app.get("/alt2dGame", response_class = HTMLResponse)
-def twoDim():
-    return FileResponse("app/alt2dim.html")
-
-@app.get("/4dGame", response_class = HTMLResponse)
-def fourDim():
-    return FileResponse("app/4dim.html")
-
-@app.get("/alt4dGame", response_class = HTMLResponse)
-def altFourDim():
-    return FileResponse("app/alt4dim.html")
-
 @app.get("/playGame", response_class = HTMLResponse)
 def playGame():
     return FileResponse("app/4dim.html")
+
+@app.get("/tutorial", response_class = HTMLResponse)
+def tutorial():
+    return FileResponse("app/tutorial.html")
 
 class CoordRequest(BaseModel):
     coords: list
@@ -55,7 +43,6 @@ def getEdges(data: SetRequest):
     board = user_boards.get(data.user_id)
     if board is None:
         return {"error": "No board for this user"}
-    print("getting edges")
     if data.player == 1:
         edgeEdges = board.get("posSet").get("edges")
     else:
@@ -76,7 +63,6 @@ def getTriangles(data: SetRequest):
     board = user_boards.get(data.user_id)
     if board is None:
         return {"error": "No board for this user"}
-    print("getting edges")
     if data.player == 1:
         triTris = board.get("posSet").get("triangles")
     else:
@@ -109,7 +95,6 @@ def getTriangles(data: SetRequest):
 
 @app.post("/start2dGame")
 def start_2d_game(data: StartGameRequest):
-    print("got request")
     user_id = data.user_id or str(random.randint(0, 1000000))
     top = Hex([], 1)
     bottom = Hex([], 1)
@@ -131,7 +116,6 @@ def start_2d_game(data: StartGameRequest):
 @app.get("/getId")
 def getId():
     user_id = str(random.randint(0, 1000000))
-    print("generated id: " + user_id)
     return {"user_id": user_id}
 
 class JoinGameRequest(BaseModel):
@@ -148,18 +132,21 @@ def joinGame(data: JoinGameRequest):
     else:
         board["joined"] = random.choice([1, -1])
     cells = boardTo4dArray(board.get("space"), [0, 2, 1, 3])
-    print(cells)
     return {"player": board["joined"], "cells": cells}
 
 @app.post("/start4dGame")
 def start_4d_game(data: StartGameRequest):
-    print("got request")
     user_id = data.user_id or str(random.randint(0, 1000000))
     coordOrder = data.coordOrder or [0, 1, 2, 3]
+    board = boardSetUp(data.size)
+    user_boards[user_id] = board
+    arrayBoard = boardTo4dArray(board.get("space"), coordOrder)
+    return {"user_id": user_id, "cells": arrayBoard, "player": board.get("player"), "gameType": board.get("gameType")}
+
+def boardSetUp(size):
     zeroBounds = [Hex(["z0"], 1), Hex(["z1"], -1), Hex(["z2"], 1), Hex(["z3"], -1)]
     fullBounds = [Hex(["f0"], 1), Hex(["f1"], -1), Hex(["f2"], 1), Hex(["f3"], -1)]
-    space = create4dBoard(data.size)
-    player = 1
+    space = create4dBoard(size)
     posEdges = [Edge(zeroBounds[0], zeroBounds[2]), Edge(zeroBounds[0], fullBounds[2]), Edge(zeroBounds[2], fullBounds[0]), Edge(fullBounds[0], fullBounds[2])]
     negEdges = [Edge(zeroBounds[1], zeroBounds[3]), Edge(zeroBounds[1], fullBounds[3]), Edge(zeroBounds[3], fullBounds[1]), Edge(fullBounds[1], fullBounds[3])]
 
@@ -179,11 +166,8 @@ def start_4d_game(data: StartGameRequest):
     posSet = {"edges": posEdges, "triangles": posTriangles, "boundEdges": posBoundEdges}
     negSet = {"edges": negEdges, "triangles": negTriangles, "boundEdges": negBoundEdges}
 
-    board = {"space": space, "player": player, "posSet": posSet, "negSet": negSet, "zeroBounds": zeroBounds, "fullBounds": fullBounds, "joined": 0, "victory": False}
-    user_boards[user_id] = board
-    arrayBoard = boardTo4dArray(board.get("space"), coordOrder)
-    
-    return {"user_id": user_id, "cells": arrayBoard, "player": board.get("player"), "gameType": board.get("gameType")}
+    board = {"space": space, "player": 1, "posSet": posSet, "negSet": negSet, "zeroBounds": zeroBounds, "fullBounds": fullBounds, "joined": 0, "victory": 0}
+    return board
 
 @app.get("/board/{user_id}")
 def get_board(user_id: str):
@@ -214,7 +198,6 @@ def play2d(data: PlayRequest):
         return {"error": "No board for this user"}
     subBoard = board.get("space")
     for coord in data.coords:
-        #print(subBoard)
         subBoard = subBoard[coord]
     if board.get("player") == 1:
         edges = board.get("posEdges")
@@ -247,7 +230,9 @@ def play4d(data: PlayRequest):
     subBoard.changePlayer4d(board.get("player"), board.get("space"), set, board.get("zeroBounds"), board.get("fullBounds"))
     board["player"] = -board.get("player")
     arrayBoard = boardTo4dArray(board.get("space"), data.coordOrder)
-    board["victory"] = findSurface(set)
+    if findSurface(set):
+        board["victory"] = -board.get("player")
+        print("victory: " + str(board.get("victory")))
     return {"cells": arrayBoard, "victory": board.get("victory"), "player": board.get("player"), "coordOrder": data.coordOrder}
 
 class BoardRequest(BaseModel):
@@ -260,6 +245,82 @@ def getBoard4d(data: BoardRequest):
     if board is None:
         return {"error": "No board for this user"}
     return {"board": boardTo4dArray(board.get("space"), data.coordOrder), "victory": board.get("victory")}
+
+class TutorialRequest(BaseModel):
+    user_id: str
+    slide: int
+    coordOrder: list | None = [0, 1, 2, 3]
+
+@app.post("/readTutorial")
+def readTutorial(data: TutorialRequest):
+    print("reading tutorial")
+    coordOrder = data.coordOrder
+    marked = []
+    board = user_boards.get(data.user_id)
+    if board is None:
+        board = boardSetUp(3)
+    slideKey = "{{" + str(data.slide) + "}}"
+    file1 = open('app/script.txt', 'r')
+    lines = file1.readlines()
+    curLine = 0
+    while curLine < len(lines) and slideKey not in lines[curLine]:
+        curLine += 1
+    print("startline: " + str(curLine))
+    curLine += 1
+    print("indicator: " + str(lines[curLine]))
+    if (lines[curLine].strip() == "True"):
+        print("setting up board")
+        curLine += 1
+        size = int(lines[curLine])
+        board = boardSetUp(size)
+        curLine += 1
+        moves = lines[curLine].split("|")
+        for move in moves:
+            move = move.strip()
+            if move == "":
+                break
+            player = move[0]
+            coords = move[1:].split(",")
+            print("coords: " + str(coords))
+            if len(coords) == 4:
+                for i in range(len(coords)):
+                    coords[i] = int(coords[i].strip())
+                print("coords: " + str(coords))
+                if player == "b":
+                    board["space"][coords[0]][coords[1]][coords[2]][coords[3]].changePlayer4d(1, board["space"], board["posSet"], board["zeroBounds"], board["fullBounds"])
+                else:
+                    board["space"][coords[0]][coords[1]][coords[2]][coords[3]].changePlayer4d(-1, board["space"], board["negSet"], board["zeroBounds"], board["fullBounds"])
+    curLine += 1
+    if (lines[curLine].strip() == "True"):
+        curLine += 1
+        coordOrder = lines[curLine].split(",")
+        for i in range(len(coordOrder)):
+            coordOrder[i] = int(coordOrder[i])
+    curLine += 1
+    marking = (lines[curLine].strip() == "True")
+    if marking:
+        curLine += 1
+        hexMarks = lines[curLine].split("|")
+        for hexMark in hexMarks:
+            hexMark = hexMark.strip()
+            if hexMark == "":
+                break
+            hexMark = hexMark.split(",")
+            for i in range(len(hexMark)):
+                hexMark[i] = int(hexMark[i].strip())
+            marked.append(hexMark)
+    curLine += 1
+    text = lines[curLine]
+    print("textline: " + str(curLine))
+    print("text: " + text)
+    victory = 0
+    if findSurface(board.get("posSet")):
+        victory = 1
+    elif findSurface(board.get("negSet")):
+        victory = -1
+    
+    user_boards[data.user_id] = board
+    return {"text": text, "victory": victory, "coordOrder": coordOrder, "marked": marked, "board": boardTo4dArray(board.get("space"), coordOrder), "marking": marking}
 
 def adjBuilder(coords, first, sign, size):
   if first == len(coords):
@@ -396,19 +457,11 @@ def findLinear(cellSet, edgeSet):
   matrixArray[0][len(edgeSet)] = 1
   matrixArray[1][len(edgeSet)] = 1
 
-  for i in range(len(matrixArray)):
-    print(matrixArray[i])
-  print()
-
   matrix = GF2Matrix(matrixArray)
 
   rref = GF2Matrix.echelon_form(matrix)[0]
 
   rrefList = rref.to_list()
-
-  for i in range(len(rrefList)):
-    print(rrefList[i])
-  print()
 
   lowestRow = len(rrefList) - 1
   lastCol = len(rrefList[lowestRow]) - 1
@@ -459,22 +512,7 @@ def boardTextRep(board):
                 boardString = boardString + "0 "
         boardString = boardString + "<br>"
     return boardString
-    #print(boardString)
-    #return "Howdy! <br>"
 
-def boardTextRep4d(board):
-    for i in range(len(board)):
-        for j in range(len(board) - i):
-            print("", " ")
-        for j in range(len(board[i])):
-            if (board[i][j] == -1):
-                print("— ", end="")
-            elif (board[i][j] == 1):
-                print("| ", end="")
-            elif (board[i][j] == 0):
-                print("0 ", end="")
-        print()
-    return
 
 def findSurface(set):
   edgeSet = set.get("edges")
@@ -483,7 +521,6 @@ def findSurface(set):
   matrixArray = [[0]*(len(triangleSet) + 1) for i in range(len(edgeSet))]
   for i in range(len(edgeSet)):
     edgeSet[i].index = i
-    #print(edgeSet[i].string() + str(i))
 
   for bound in boundEdges:
     matrixArray[bound.index][len(matrixArray[bound.index]) - 1] = 1
@@ -504,7 +541,5 @@ def findSurface(set):
     lastColSum = lastColSum + rrefList[i][len(rrefList[i]) - 1]
 
   if lastColSum > 1:
-    print("true")
     return True
-  print("false")
   return False

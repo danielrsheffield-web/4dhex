@@ -274,9 +274,9 @@ body {
       }
       const data2 = await response2.json();
       render4dHexGrid(data2.board);
-      if (data2.victory) {
+      if (data2.victory !== 0) {
         gameOver = true;
-        victory(-data2.player);
+        victory(data2.victory);
       }
       checking = false;
     }
@@ -442,9 +442,9 @@ body {
           }
         }
 
-        if (data.victory) {
-          gameOver = true;
-          victory(-data.player);
+        if (data.victory !== 0) {
+            gameOver = true;
+            victory(data.victory);
         }
       }
 
@@ -495,7 +495,7 @@ body {
         }
       }
       
-    async function createEdges(player) {
+    async function showEdges(player) {
         const response = await fetch("/getEdges", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -527,7 +527,7 @@ body {
         })
       }
 
-      async function createTriangles(player) {
+      async function showTriangles(player) {
         const response = await fetch("/getTriangles", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -790,17 +790,17 @@ function victory(player){
       <p><span id="marking"></span></p>
       <button onclick="clearMarking()">Clear Marking</button>
       <br>
-      <button onclick="createEdges(1)">Create Blue Edges</button> 
-      <button onclick="createEdges(-1)">Create Red Edges</button> 
+      <button onclick="showEdges(1)">Show Blue Edges</button> 
+      <button onclick="showEdges(-1)">Show Red Edges</button> 
       <button onclick="clearEdges()">Clear Edges</button>
       <br>
-      <button onclick="createTriangles(1)">Create Blue Triangles</button> 
-      <button onclick="createTriangles(-1)">Create Red Triangles</button>
+      <button onclick="showTriangles(1)">Show Blue Triangles</button> 
+      <button onclick="showTriangles(-1)">Show Red Triangles</button>
       <button onclick="clearEdges()">Clear Triangles</button>
       <br>
       <button onclick="newOrder(1)" id="axisButton1">Blue Spanning</button>
       <button onclick="newOrder(2)" id="axisButton2">Red Spanning</button>
-      <button onclick="newOrder(3)" id="axisButton3">Blue Horizontal, Red Vertical</button>
+      <button onclick="newOrder(3)" id="axisButton3">Cross</button>
       <button onclick="recoverGame()">Recover Game</button>
       </aside>
 <main class="main-content">
