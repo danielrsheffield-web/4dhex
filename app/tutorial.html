@@ -127,6 +127,17 @@ body {
         else if (data.victory === -1){
           victory(-1);
         }
+
+        if (slide === 21){
+          document.getElementById("nextButton").style.display = "none";
+        }
+        else if (slide === 0){
+          document.getElementById("previousButton").style.display = "none";
+        }
+        else {
+          document.getElementById("previousButton").style.display = "inline";
+          document.getElementById("nextButton").style.display = "inline";
+        }
       }
 
       function changeSlide(direction){
@@ -241,7 +252,12 @@ body {
       coords = findHex4d(mouseX, mouseY, ctx);
       if (coords.length === 0) {return;}
       storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
-      playAt(coords);
+      if (e.which !== 3){playAt(coords);}
+      else {mark(coords);}
+    }
+
+    function handleContextMenu(e){
+      e.preventDefault();
     }
 
     function handleMouseMove(e){
@@ -284,6 +300,8 @@ body {
 
     // listen for mousedown events
     document.addEventListener("DOMContentLoaded", () => {
+        clearMarking();
+        clearEdges();
         document.getElementById("player").innerHTML = "Blue";
         curPlayer = 1;
         localStorage.setItem("curPlayer", curPlayer);
@@ -293,6 +311,7 @@ body {
         displaySlide(slide);
         document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
+        document.getElementById("myCanvas").addEventListener("contextmenu", handleContextMenu);
     });
 
 
@@ -502,6 +521,7 @@ body {
       }
       
     async function showEdges(player) {
+        clearEdges();
         const response = await fetch("/getEdges", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -534,6 +554,7 @@ body {
       }
 
       async function showTriangles(player) {
+        clearEdges();
         const response = await fetch("/getTriangles", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -774,9 +795,7 @@ function victory(player){
 <aside class="sidebar" id="sidebar">
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
     <div id="GameInfo"><span id="gameId"></span></div>
-    
-      <button onclick="toggleMarking()">Toggle Marking</button>
-      <p><span id="marking"></span></p>
+
       <button onclick="clearMarking()">Clear Marking</button>
       <br>
       <button onclick="showEdges(1)">Show Blue Edges</button> 
@@ -790,7 +809,7 @@ function victory(player){
       <button onclick="newOrder(1)" id="axisButton1">Blue Spanning</button>
       <button onclick="newOrder(2)" id="axisButton2">Red Spanning</button>
       <button onclick="newOrder(3)" id="axisButton3">Cross</button>
-      <button onclick="recoverGame()">Recover Game</button>
+
       </aside>
 <main class="main-content">
     <span id="error"></span>
@@ -799,7 +818,7 @@ function victory(player){
         <canvas id="myCanvas" width="1200" height="600"></canvas>
         <svg id="edgeLayer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></svg>
       </div>
-    <div><button onclick="changeSlide(-1)" class="changeSlide">Previous</button> <button onclick="changeSlide(1)" class="changeSlide">Next</button></div>
+    <div><button onclick="changeSlide(-1)" class="changeSlide" id="previousButton">Previous</button> <button onclick="changeSlide(1)" class="changeSlide" id="nextButton">Next</button></div>
     <div id="slideText"></div>
   
   

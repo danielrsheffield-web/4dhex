@@ -184,7 +184,12 @@ body {
       coords = findHex4d(mouseX, mouseY, ctx);
       if (coords.length === 0) {return;}
       storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
-      playAt(coords);
+      if (e.which !== 3){playAt(coords);}
+      else {mark(coords);}
+    }
+
+    function handleContextMenu(e){
+      e.preventDefault();
     }
 
     function handleMouseMove(e){
@@ -231,9 +236,12 @@ body {
 
     // listen for mousedown events
     document.addEventListener("DOMContentLoaded", () => {
+        clearMarking();
+        clearEdges();
         startGame();
         document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
+        document.getElementById("myCanvas").addEventListener("contextmenu", handleContextMenu);
         setInterval(checkPlayer, 1000);
     });
 
@@ -396,11 +404,6 @@ body {
     }
 
       async function playAt(coords) {
-        if (marking){
-          mark(coords);
-          return;
-        }
-
         if (curPlayer === -player){return;}
         storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
         localStorage.setItem("triangles", JSON.stringify([]));
@@ -449,7 +452,6 @@ body {
       }
 
       async function mark(coords){
-        if (!marking) {return;}
         for (let i = 0; i < markedCoords.length; i++) {
             if (markedCoords[i][0] === coords[0] && markedCoords[i][1] === coords[1] && markedCoords[i][2] === coords[2] && markedCoords[i][3] === coords[3]) {
               markedCoords.splice(i, 1);
@@ -496,6 +498,7 @@ body {
       }
       
     async function showEdges(player) {
+        clearEdges();
         const response = await fetch("/getEdges", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -528,6 +531,7 @@ body {
       }
 
       async function showTriangles(player) {
+        clearEdges();
         const response = await fetch("/getTriangles", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -785,9 +789,7 @@ function victory(player){
 <aside class="sidebar" id="sidebar">
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
     <div id="GameInfo"><span id="gameId"></span></div>
-    
-      <button onclick="toggleMarking()">Toggle Marking</button>
-      <p><span id="marking"></span></p>
+
       <button onclick="clearMarking()">Clear Marking</button>
       <br>
       <button onclick="showEdges(1)">Show Blue Edges</button> 
