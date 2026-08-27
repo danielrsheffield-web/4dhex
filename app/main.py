@@ -166,9 +166,7 @@ def boardSetUp(size):
     posSet = {"edges": posEdges, "triangles": posTriangles, "boundEdges": posBoundEdges}
     negSet = {"edges": negEdges, "triangles": negTriangles, "boundEdges": negBoundEdges}
 
-    botMemory = BotMemory(size, posSet, negSet)
-
-    board = {"space": space, "player": 1, "posSet": posSet, "negSet": negSet, "zeroBounds": zeroBounds, "fullBounds": fullBounds, "joined": 0, "victory": 0, "botMemory": botMemory}
+    board = {"space": space, "player": 1, "posSet": posSet, "negSet": negSet, "zeroBounds": zeroBounds, "fullBounds": fullBounds, "joined": 0, "victory": 0}
     return board
 
 @app.get("/board/{user_id}")
@@ -182,6 +180,7 @@ class PlayRequest(BaseModel):
     coords: list
     user_id: str
     coordOrder: list | None = [0, 1, 2, 3]
+    botResponse: bool | None = False
 
 class PlayerRequest(BaseModel):
     user_id: str
@@ -229,17 +228,50 @@ def play4d(data: PlayRequest):
         set = board.get("posSet")
     else:
         set = board.get("negSet")
-    subBoard.changePlayer4d(board.get("player"), board.get("space"), set, board.get("zeroBounds"), board.get("fullBounds"), board.get("botMemory"))
+    subBoard.changePlayer4d(board.get("player"), board.get("space"), set, board.get("zeroBounds"), board.get("fullBounds"))
     board["player"] = -board.get("player")
-    arrayBoard = boardTo4dArray(board.get("space"), data.coordOrder)
     if findSurface(set):
-        board["victory"] = -board.get("player")
-        print("victory: " + str(board.get("victory")))
+        board["victory"] = -board.get("player") 
+    if (data.botResponse and board.get("victory") == 0):
+        subBoard = board.get("space")
+        bestMove = evalMove(board.get("space"))
+        for value in bestMove:
+            subBoard = subBoard[value]
+        if board.get("player") == 1:
+            set = board.get("posSet")
+        else:
+            set = board.get("negSet")
+        subBoard.changePlayer4d(board.get("player"), board.get("space"), set, board.get("zeroBounds"), board.get("fullBounds"))
+        board["player"] = -board.get("player")
+        if findSurface(set):
+            board["victory"] = -board.get("player") 
+    arrayBoard = boardTo4dArray(board.get("space"), data.coordOrder)
+      
     return {"cells": arrayBoard, "victory": board.get("victory"), "player": board.get("player"), "coordOrder": data.coordOrder}
 
 class BoardRequest(BaseModel):
     user_id: str
     coordOrder: list | None = [0, 1, 2, 3]
+
+@app.post("/botMove")
+def botMove(data: BoardRequest):
+    board = user_boards.get(data.user_id)
+    if board is None:
+        return {"error": "No board for this user"}
+    subBoard = board.get("space")
+    bestMove = evalMove(board.get("space"))
+    for value in bestMove:
+        subBoard = subBoard[value]
+    if board.get("player") == 1:
+        set = board.get("posSet")
+    else:
+        set = board.get("negSet")
+    subBoard.changePlayer4d(board.get("player"), board.get("space"), set, board.get("zeroBounds"), board.get("fullBounds"))
+    board["player"] = -board.get("player")
+    if findSurface(set):
+        board["victory"] = -board.get("player")
+    arrayBoard = boardTo4dArray(board.get("space"), data.coordOrder)
+    return {"cells": arrayBoard, "victory": board.get("victory"), "player": board.get("player"), "coordOrder": data.coordOrder}
 
 @app.post("/getBoard4d")
 def getBoard4d(data: BoardRequest):
@@ -256,7 +288,6 @@ class TutorialRequest(BaseModel):
 @app.post("/readTutorial")
 def readTutorial(data: TutorialRequest):
     size = 3
-    print("reading tutorial")
     is2d = False
     manCoords = False
     coordOrder = data.coordOrder
@@ -270,18 +301,13 @@ def readTutorial(data: TutorialRequest):
     curLine = 0
     while curLine < len(lines) and slideKey not in lines[curLine]:
         curLine += 1
-    print("startline: " + str(curLine))
     curLine += 1
     if ("2" in lines[curLine]):
         is2d = True
-        print("its 2d")
     if ("c" in lines[curLine]):
         manCoords = True
-        print("its manual coords")
     curLine += 1
-    print("indicator: " + str(lines[curLine]))
     if (lines[curLine].strip() == "True"):
-        print("setting up board")
         curLine += 1
         size = int(lines[curLine])
         board = boardSetUp(size)
@@ -293,11 +319,9 @@ def readTutorial(data: TutorialRequest):
                 break
             player = move[0]
             coords = move[1:].split(",")
-            print("coords: " + str(coords))
             if len(coords) == 4:
                 for i in range(len(coords)):
                     coords[i] = int(coords[i].strip())
-                print("coords: " + str(coords))
                 if player == "b":
                     board["space"][coords[0]][coords[1]][coords[2]][coords[3]].changePlayer4d(1, board["space"], board["posSet"], board["zeroBounds"], board["fullBounds"])
                 else:
@@ -323,8 +347,6 @@ def readTutorial(data: TutorialRequest):
             marked.append(hexMark)
     curLine += 1
     text = lines[curLine]
-    print("textline: " + str(curLine))
-    print("text: " + text)
     victory = 0
     if findSurface(board.get("posSet")):
         victory = 1
@@ -352,86 +374,44 @@ def adjInit(coords, size):
   posSet.extend(negSet)
   return posSet
 
-def evalMove(cells, player, botMemory):
-    
-    for volume in cells:
-        for plane in volume:
-            for row in plane:
-                for cell in row:
-                    if cell.player == player:
-                        return True
-    return False
-    
-class BotMemory:
-    def __init__(self, size, posSet, negSet):
-        self.posSet = posSet
-        self.negSet = negSet
-        self.size = size
-        self.posPrinc = [[[[False,False]] * size for i in range(size)] for j in range(size)]
-        self.negPrinc = [[[[False,False]] * size for i in range(size)] for j in range(size)]
-
-    def newTriangle(self, newT):
-        view = []
-        for vertex in newT.vertices:
-            if vertex.player == 1:
-              view.append([vertex.coords[0], vertex.coords[2]])
-            else:   
-              view.append([vertex.coords[1], vertex.coords[3]])
-
-        view.sort()
-
-        setClaimed = 0
-        # 0 = none
-        # 1 = two boards right above/below each other
-        # 2 = a board up and to the left of the other
-        # 3 = a board up and to the right of the other
-        base = view[0]
-        relation = [view[1][0] - base[0], view[1][1] - base[1]]
-
-        if relation[0] == 0:
-          if relation[1] == 1:
-            setClaimed = 3
-          elif relation[1] == -1:
-            setClaimed = 3
-            base = [base[0], base[1] - 1]
-          else:
-            return {"newTriangle": False}
-        if relation[1] == 0:
-          if relation[0] == 1:
-            setClaimed = 2
-          elif relation[0] == -1:
-            setClaimed = 2
-            base = [base[0] - 1, base[1]]
-          else:
-            return {"newTriangle": False}
-        if relation[0] == 1 and relation[1] == 1:
-            setClaimed = 1
-            base = [base[0] - 1, base[1] - 1]
-        else:
-            setClaimed = 1
-        
-        relation = [view[2][0] - base[0], view[2][1] - base[1]]
-        if setClaimed == 1:
-            if relation[0] == 1 and relation[1] == 0:
-                return {"newTriangle": True, "side": 0, "base": base}
-            elif relation[0] == 0 and relation[1] == 1:
-                return {"newTriangle": True, "side": 1, "base": base}
-
-        elif setClaimed == 2:
-            if relation[0] == 1 and relation[1] == 1:
-                return {"newTriangle": True, "side": 0, "base": base}
-            elif relation[0] == 0 and relation[1] == -1:
-                return {"newTriangle": True, "side": 1, "base": base}
-        
-        elif setClaimed == 3:
-            if relation[0] == 1 and relation[1] == 1:
-                return {"newTriangle": True, "side": 1, "base": base}
-            elif relation[0] == -1 and relation[1] == 0:
-                return {"newTriangle": True, "side": 0, "base": base}
-        
-        return {"newTriangle": False}
-
-
+def evalMove(cells):
+    size = len(cells)
+    tally = [[[[0]*size for i in range(size)] for j in range(size)] for k in range(size)]
+    for i in range(100):
+        simBoard = boardSetUp(size)
+        for i in range(size):
+            for j in range(size):
+                for k in range(size):
+                    for l in range(size):
+                        hexChoice = cells[i][j][k][l].player
+                        if hexChoice == 0:
+                            hexChoice = random.choice([1, -1])
+                        if hexChoice == 1:
+                            simBoard.get("space")[i][j][k][l].changePlayer4d(hexChoice, simBoard.get("space"), simBoard.get("posSet"), simBoard.get("zeroBounds"), simBoard.get("fullBounds"))
+                        if hexChoice == -1:
+                            simBoard.get("space")[i][j][k][l].changePlayer4d(hexChoice, simBoard.get("space"), simBoard.get("negSet"), simBoard.get("zeroBounds"), simBoard.get("fullBounds"))
+        victor = -1
+        if (findSurface(simBoard.get("posSet"))):
+            victor = 1
+        for i in range(size):
+            for j in range(size):
+                for k in range(size):
+                    for l in range(size):
+                        if simBoard.get("space")[i][j][k][l].player == victor:
+                            tally[i][j][k][l] += 1
+    max = 0
+    bestCoords = [0, 0, 0, 0]
+    print(tally)
+    for i in range(size):
+        for j in range(size):
+            for k in range(size):
+                for l in range(size):
+                    if (cells[i][j][k][l].player == 0):
+                        if (tally[i][j][k][l] > max):
+                            max = tally[i][j][k][l]
+                            bestCoords = [i, j, k, l]
+    print(max)
+    return bestCoords
 
 class Hex:
 
@@ -466,7 +446,7 @@ class Hex:
       if adj.player == self.player:
         edges.append(Edge(self, adj))
 
-  def changePlayer4d(self, player, space, set, zeroBounds, fullBounds, botMemory = None):
+  def changePlayer4d(self, player, space, set, zeroBounds, fullBounds):
     self.player = player
 
     adjCoords = adjInit(self.coords, len(space))
@@ -500,15 +480,6 @@ class Hex:
           if self.edgeSet[k].ends[1] in otherEdge.ends:
             newT = Triangle(otherEdge, self.edgeSet[i], self.edgeSet[k])
             triangles.append(newT)
-            #if botMemory is not None:
-                #result = botMemory.newTriangle(newT)
-                #if result.get("newTriangle"):
-                #    if player == 1:
-                #        botMemory.posPrinc[result.get("base")[0]][result.get("base")[1]][result.get("side")] = True
-                #        print(botMemory.posPrinc)
-                #    else:
-                #        botMemory.negPrinc[result.get("base")[0]][result.get("base")[1]][result.get("side")] = True
-                #        print(botMemory.negPrinc)
 
 
   def string(self):

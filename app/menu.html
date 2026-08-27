@@ -24,7 +24,7 @@
   width: 100%;
 }
 #overlay {
-  bottom: 500px;
+  bottom: 400px;
   left: 690px;
   position: absolute;
   display: flex;
@@ -101,6 +101,20 @@
             const data2 = await response2.json();
             localStorage.setItem("cells", JSON.stringify(data2.cells));
             window.location.href = "/playGame?size=" + size + "&game_id=" + data.user_id + "&player=0";
+        }
+
+        async function botGame() {
+            const response = await fetch("/getId");
+            const data = await response.json();
+            const coordOrder = [0, 2, 1, 3];
+            const response2 = await fetch("/start4dGame", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: data.user_id, size: size, coordOrder: coordOrder }),
+            });
+            const data2 = await response2.json();
+            localStorage.setItem("cells", JSON.stringify(data2.cells));
+            window.location.href = "/playGame?size=" + size + "&game_id=" + data.user_id + "&player=0&botResponse=true";
         }
 
 
@@ -302,6 +316,7 @@
         </div>
             <button class="main-btn" onclick="startTutorial()">Tutorial</button>
             <button class="main-btn" onclick="localGame()">Local Game</button>
+            <button class="main-btn" onclick="botGame()">Bot Game</button>
             <button class="main-btn" onclick="onlineGame()">Host Game</button>
             <button class="main-btn" onclick="startJoin()">Join Game</button>
             <form>

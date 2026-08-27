@@ -71,6 +71,7 @@ body {
       let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
       let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
       let marking = JSON.parse(localStorage.getItem("marking") || "false");
+      let botResponse = Boolean(new URLSearchParams(window.location.search).get("botResponse")) || false;
       let gameOver = false;
       let curPlayer = 0;
       let boardSize = Number(new URLSearchParams(window.location.search).get("size"));
@@ -183,7 +184,6 @@ body {
       const mouseY = e.clientY - rect.top;
       coords = findHex4d(mouseX, mouseY, ctx);
       if (coords.length === 0) {return;}
-      storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
       if (e.which !== 3){playAt(coords);}
       else {mark(coords);}
     }
@@ -243,6 +243,10 @@ body {
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
         document.getElementById("myCanvas").addEventListener("contextmenu", handleContextMenu);
         setInterval(checkPlayer, 1000);
+        if (botResponse) {
+          document.getElementById("playAsRedButton").style.visibility = "visible";
+        }
+        else {document.getElementById("playAsRedButton").style.visibility = "hidden";}
     });
 
     async function checkPlayer() {
@@ -418,7 +422,7 @@ body {
         const response = await fetch("/play4d", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ coords: coords, user_id: gameId, coordOrder: coordOrder }),
+          body: JSON.stringify({ coords: coords, user_id: gameId, coordOrder: coordOrder, botResponse: botResponse }),
         });
 
         if (!response.ok) {
@@ -782,6 +786,37 @@ function victory(player){
     ctx.fillText("Red has won!", centerX, 70);
   }
 }
+
+async function playAsRed() {
+  const response = await fetch("/botMove", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
+  });
+  if (!response.ok) {
+    document.getElementById("error").innerHTML = "Server error: " + response.status;
+    return;
+  }
+  const data = await response.json();
+  render4dHexGrid(data.cells);
+  if (data.player === 1){
+          curPlayer = 1;
+          document.getElementById("player").innerHTML = "Blue";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+          if (player === 0){
+            document.getElementById("sidebar").style.backgroundColor = "#0f72e2";
+          }
+        }
+        else{
+          curPlayer = -1;
+          document.getElementById("player").innerHTML = "Red";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+          if (player === 0){
+            document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
+          }
+        }
+  document.getElementById("playAsRedButton").style.visibility = "hidden";
+}
     </script>
   </head>
   <body>
@@ -789,6 +824,7 @@ function victory(player){
 <aside class="sidebar" id="sidebar">
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
     <div id="GameInfo"><span id="gameId"></span></div>
+    <button onclick="playAsRed()" visibility="hidden" id="playAsRedButton">Play as Red</button>
 
       <button onclick="clearMarking()">Clear Marking</button>
       <br>
