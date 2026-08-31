@@ -79,9 +79,9 @@ body {
       let centerX = 0;
       let centerY = 0;
       let checking = false;
-
+      let manCoords = false;
     
-    function render2dHexGrid(cells, baseX, baseY, ctx, axes) {
+    function render2dHexGrid(cells, baseX, baseY, ctx, axes, coords = []) {
 
         ctx.beginPath();
         ctx.moveTo(baseX, baseY);
@@ -89,7 +89,7 @@ body {
         ctx.lineTo(baseX - (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[2] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -99,7 +99,7 @@ body {
         ctx.lineTo(baseX + (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[2] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -109,7 +109,7 @@ body {
         ctx.lineTo(baseX - (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[3] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -119,7 +119,7 @@ body {
         ctx.lineTo(baseX + (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[3] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -127,7 +127,8 @@ body {
           for (let j = 0; j < cells[i].length; j++) {
             x = baseX + ((i - j) * hexSize * .75)
             y = baseY + ((i + j) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
-            drawHex(x, y, cells[i][j], ctx);
+            newCoords = coords.concat(i, j);
+            drawHex(x, y, cells[i][j], ctx, newCoords);
           }
         }
 
@@ -242,11 +243,14 @@ body {
         document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
         document.getElementById("myCanvas").addEventListener("contextmenu", handleContextMenu);
-        setInterval(checkPlayer, 1000);
-        if (botResponse) {
-          document.getElementById("playAsRedButton").style.visibility = "visible";
+        if (player !== 0 && !botResponse) {
+            setInterval(checkPlayer, 1000);
         }
-        else {document.getElementById("playAsRedButton").style.visibility = "hidden";}
+        if (botResponse) {
+          if (player === -1) {
+            botMove();
+          }
+        }
     });
 
     async function checkPlayer() {
@@ -307,11 +311,14 @@ body {
 
 
 
-      function drawHex(x, y, player, ctx) {
+      function drawHex(x, y, player, ctx, coords = []) {
         genHex(x, y, ctx);
         ctx.fillStyle = player === 1 ? "blue" : (player === -1 ? "red" : "#e8e8e8");
         ctx.fill();
         ctx.stroke();
+        if (manCoords){
+          writeCoords(coords, x, y, ctx);        
+        }
       }
 
       function render4dHexGrid(cells, incOthers = true) {
@@ -343,7 +350,7 @@ body {
         ctx.lineTo(centerX - ((boardSize + 1) * hexSize * .75), centerY - ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
         ctx.lineTo(centerX - (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[0] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -353,7 +360,7 @@ body {
         ctx.lineTo(centerX + ((boardSize + 1) * hexSize * .75), centerY + ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
         ctx.lineTo(centerX + (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[0] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -363,7 +370,7 @@ body {
         ctx.lineTo(centerX + ((boardSize + 1) * hexSize * .75), centerY - ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
         ctx.lineTo(centerX + (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[1] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -373,7 +380,7 @@ body {
         ctx.lineTo(centerX - ((boardSize + 1) * hexSize * .75), centerY + ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
         ctx.lineTo(centerX - (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[1] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -381,7 +388,7 @@ body {
           for (let j = 0; j < cells[i].length; j++) {
             x = centerX + (((i - j) * hexSize * .75) * (boardSize + 1.5))
             y = centerY + (((i + j) * hexSize * .43) * (boardSize + 1)) - ((boardSize - 1) * (boardSize + 1) * hexSize * .43)
-            render2dHexGrid(cells[i][j], x, y, ctx, axes);
+            render2dHexGrid(cells[i][j], x, y, ctx, axes, [i, j]);
           }
         }
 
@@ -393,13 +400,19 @@ body {
             ctx.arc(center.x, center.y, hexSize / 4, 0, 2 * Math.PI);
             ctx.fillStyle = "yellow";
             ctx.fill();
+            if (manCoords){
+              writeCoords(coord, center.x, center.y, ctx);
+            }
           }
           else {
             genHex(center.x, center.y, ctx);
             ctx.fillStyle = "yellow";
             ctx.fill();
             ctx.stroke();
-          }  
+            if (manCoords){
+              writeCoords(coord, center.x, center.y, ctx);
+          }
+          } 
         });
         if (incOthers){
           renderTriangles();
@@ -408,7 +421,7 @@ body {
     }
 
       async function playAt(coords) {
-        if (curPlayer === -player){return;}
+       if (curPlayer === -player){return;}
         storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
         localStorage.setItem("triangles", JSON.stringify([]));
         localStorage.setItem("edges", JSON.stringify([]));
@@ -452,6 +465,9 @@ body {
         if (data.victory !== 0) {
             gameOver = true;
             victory(data.victory);
+        }
+        if (botResponse && data.victory === 0) {
+            botMove();
         }
       }
 
@@ -587,8 +603,8 @@ body {
         }
         storedCells = JSON.parse(localStorage.getItem("cells") || "[]");
         render4dHexGrid(storedCells);
-        if (player !== 0){
-          document.getElementById("gameId").innerHTML = "Game ID: " + gameId;
+        if (player !== 0 && !botResponse){
+          document.getElementById("gameId").innerHTML = "Game Code: " + gameId;
         }
       }
 
@@ -636,6 +652,9 @@ body {
 
           ctx.fillStyle = player === 1 ? '#b1d2f9' : (player === -1 ? '#f9b8b1' : (curPlayer === 1 ? '#b1d2f9' : '#f9b8b1'));
           ctx.fill();
+          if(manCoords){
+                    writeCoords(adj[i], center.x, center.y, ctx);
+              }
         }
         else {
           playerHere = storedCells[adj[i][0]][adj[i][1]][adj[i][2]][adj[i][3]];
@@ -732,7 +751,7 @@ async function newOrder(choice){
         document.getElementById("axisButton3").style.backgroundColor = "#eee";
     }
     else if (choice === 3){
-        nextOrder = [1,2,3,0];
+        nextOrder = [0,1,2,3];
         document.getElementById("axisButton1").style.backgroundColor = "#eee";
         document.getElementById("axisButton2").style.backgroundColor = "#eee";
         document.getElementById("axisButton3").style.backgroundColor = "#ccc";
@@ -787,7 +806,7 @@ function victory(player){
   }
 }
 
-async function playAsRed() {
+async function botMove() {
   const response = await fetch("/botMove", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -815,7 +834,31 @@ async function playAsRed() {
             document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
           }
         }
-  document.getElementById("playAsRedButton").style.visibility = "hidden";
+}
+
+function toggleCoords() {
+  manCoords = !manCoords;
+  if (manCoords) {
+    document.getElementById("coordsButton").innerHTML = "Hide Coords";
+  }
+  else {
+    document.getElementById("coordsButton").innerHTML = "Show Coords";
+  }
+  render4dHexGrid(storedCells);
+
+}
+
+function writeCoords(coords, x, y, ctx){
+  ctx.fillStyle = "black";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  newCoords = [0, 0, 0, 0]
+  canonOrder = [0, 2, 1, 3]
+  for (let i = 0; i < coords.length; i++) {
+    newCoords[canonOrder[coordOrder[i]]] = 3 - coords[i];
+  }
+  ctx.fillText(newCoords.join(","), x, y);
 }
     </script>
   </head>
@@ -824,7 +867,6 @@ async function playAsRed() {
 <aside class="sidebar" id="sidebar">
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
     <div id="GameInfo"><span id="gameId"></span></div>
-    <button onclick="playAsRed()" visibility="hidden" id="playAsRedButton">Play as Red</button>
 
       <button onclick="clearMarking()">Clear Marking</button>
       <br>
@@ -839,7 +881,7 @@ async function playAsRed() {
       <button onclick="newOrder(1)" id="axisButton1">Blue Spanning</button>
       <button onclick="newOrder(2)" id="axisButton2">Red Spanning</button>
       <button onclick="newOrder(3)" id="axisButton3">Cross</button>
-      <button onclick="recoverGame()">Recover Game</button>
+      <button onclick="toggleCoords()" id="coordsButton">Show Coords</button>
       </aside>
 <main class="main-content">
     <span id="error"></span>

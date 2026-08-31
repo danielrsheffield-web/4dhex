@@ -133,7 +133,9 @@ body {
         document.getElementById("slideText").style.display = "block";
         boardSize = data.size;
         is2d = data.is2d;
-        manCoords = data.manCoords;
+        if(manCoords !== data.manCoords){
+            toggleCoords();
+        }
         if (data.is2d){
             c = document.getElementById("myCanvas");
             ctx = c.getContext("2d");
@@ -178,7 +180,7 @@ body {
         ctx.lineTo(baseX - (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[2] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -188,7 +190,7 @@ body {
         ctx.lineTo(baseX + (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[2] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -198,7 +200,7 @@ body {
         ctx.lineTo(baseX - (hexSize * .75), baseY + ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX - ((boardSize + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[3] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -208,7 +210,7 @@ body {
         ctx.lineTo(baseX + (hexSize * .75), baseY - ((boardSize + 1) * hexSize * .43));
         ctx.lineTo(baseX + ((boardSize + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[3] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -371,15 +373,10 @@ body {
         ctx.fillStyle = player === 1 ? "blue" : (player === -1 ? "red" : "#e8e8e8");
         ctx.fill();
         ctx.stroke();
-        if (manCoords){
-          ctx.fillStyle = "black";
-          ctx.font = "12px Arial";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          newCoords = coords.map(coord => 3 - coord);
-          ctx.fillText(newCoords.join(","), x, y);
-        }
-      }
+            if (manCoords){
+                writeCoords(coords, x, y, ctx);
+            }
+    }
 
       function render4dHexGrid(cells, incOthers = true) {
         if (!cells){return;}
@@ -410,7 +407,7 @@ body {
         ctx.lineTo(centerX - ((boardSize + 1) * hexSize * .75), centerY - ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
         ctx.lineTo(centerX - (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[0] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -420,7 +417,7 @@ body {
         ctx.lineTo(centerX + ((boardSize + 1) * hexSize * .75), centerY + ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
         ctx.lineTo(centerX + (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[0] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -430,7 +427,7 @@ body {
         ctx.lineTo(centerX + ((boardSize + 1) * hexSize * .75), centerY - ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
         ctx.lineTo(centerX + (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[1] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -440,7 +437,7 @@ body {
         ctx.lineTo(centerX - ((boardSize + 1) * hexSize * .75), centerY + ((boardSize + .5) * (boardSize + 1) * hexSize * .43));
         ctx.lineTo(centerX - (boardSize * (boardSize + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[1] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -460,12 +457,18 @@ body {
             ctx.arc(center.x, center.y, hexSize / 4, 0, 2 * Math.PI);
             ctx.fillStyle = "yellow";
             ctx.fill();
+            if (manCoords){
+              writeCoords(coord, center.x, center.y, ctx);
+            }
           }
           else {
             genHex(center.x, center.y, ctx);
             ctx.fillStyle = "yellow";
             ctx.fill();
             ctx.stroke();
+            if (manCoords){
+              writeCoords(coord, center.x, center.y, ctx);
+            }
           }  
         });
         if (incOthers){
@@ -690,9 +693,10 @@ body {
       }
 
       async function renderAdj(coords, add) {
-        if (is2d || manCoords){
+        if (is2d || coords.length !== 4){
           return;
         }
+        coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
         adj = adjInit(coords);
 
         let c = document.getElementById("myCanvas");
@@ -703,21 +707,28 @@ body {
         }
         for (let i = 0; i < adj.length; i++) {
             let center = Center(adj[i]);
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, hexSize / 4, 0, 2 * Math.PI);
-        if (add) {
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, hexSize / 4, 0, 2 * Math.PI);
+            if (add) {
 
-          ctx.fillStyle = player === 1 ? '#b1d2f9' : (player === -1 ? '#f9b8b1' : (curPlayer === 1 ? '#b1d2f9' : '#f9b8b1'));
-          ctx.fill();
-        }
-        else {
-          playerHere = storedCells[adj[i][0]][adj[i][1]][adj[i][2]][adj[i][3]];
-          if (playerHere === 0) {ctx.fillStyle = 'e8e8e8';}
-          else {ctx.fillStyle = playerHere === 1 ? "blue" : playerHere === -1;}
-          ctx.fill();
+                ctx.fillStyle = player === 1 ? '#b1d2f9' : (player === -1 ? '#f9b8b1' : (curPlayer === 1 ? '#b1d2f9' : '#f9b8b1'));
+                ctx.fill();
+                if(manCoords){
+                    writeCoords(adj[i], center.x, center.y, ctx);
+              }
+            }
+            else {
+              playerHere = storedCells[adj[i][0]][adj[i][1]][adj[i][2]][adj[i][3]];
+              if (playerHere === 0) {ctx.fillStyle = 'e8e8e8';}
+              else {ctx.fillStyle = playerHere === 1 ? "blue" : playerHere === -1;}
+              ctx.fill();
+              if(manCoords){
+                writeCoords(adj[i], center.x, center.y, ctx);
+              }
+            }
         }
       }
-      }
+
 
 async function changeAxis(i, m){
     localStorage.setItem("edges", JSON.stringify([]));
@@ -805,7 +816,7 @@ async function newOrder(choice){
         document.getElementById("axisButton3").style.backgroundColor = "#eee";
     }
     else if (choice === 3){
-        nextOrder = [1,2,3,0];
+        nextOrder = [0,1,2,3];
         document.getElementById("axisButton1").style.backgroundColor = "#eee";
         document.getElementById("axisButton2").style.backgroundColor = "#eee";
         document.getElementById("axisButton3").style.backgroundColor = "#ccc";
@@ -858,6 +869,32 @@ function victory(player){
     ctx.fillText("Red has won!", 200, 35);
   }
 }
+
+function toggleCoords() {
+  manCoords = !manCoords;
+  if (manCoords) {
+    document.getElementById("coordsButton").innerHTML = "Hide Coords";
+  }
+  else {
+    document.getElementById("coordsButton").innerHTML = "Show Coords";
+  }
+  if (!is2d){
+    render4dHexGrid(storedCells);
+  }
+}
+
+function writeCoords(coords, x, y, ctx){
+  ctx.fillStyle = "black";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  newCoords = [0, 0, 0, 0]
+  canonOrder = [0, 2, 1, 3]
+  for (let i = 0; i < coords.length; i++) {
+    newCoords[canonOrder[coordOrder[i]]] = 3 - coords[i];
+  }
+  ctx.fillText(newCoords.join(","), x, y);
+}
     </script>
   </head>
   <body>
@@ -880,6 +917,7 @@ function victory(player){
       <button onclick="newOrder(1)" id="axisButton1">Blue Spanning</button>
       <button onclick="newOrder(2)" id="axisButton2">Red Spanning</button>
       <button onclick="newOrder(3)" id="axisButton3">Cross</button>
+      <button onclick="toggleCoords()" id="coordsButton">Show Coords</button>
 
       </aside>
 <main class="main-content">

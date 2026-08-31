@@ -24,7 +24,7 @@
   width: 100%;
 }
 #overlay {
-  bottom: 400px;
+  bottom: 500px;
   left: 690px;
   position: absolute;
   display: flex;
@@ -52,7 +52,7 @@
     font-weight: bold;
 }
 .size-btn {
-    width: 20%;
+    width: 28.5%;
     padding: 8px;
     cursor: pointer;
     border-radius: 6px;
@@ -114,7 +114,8 @@
             });
             const data2 = await response2.json();
             localStorage.setItem("cells", JSON.stringify(data2.cells));
-            window.location.href = "/playGame?size=" + size + "&game_id=" + data.user_id + "&player=0&botResponse=true";
+            player = Math.floor(Math.random() * 2) * 2 - 1;
+            window.location.href = "/playGame?size=" + size + "&game_id=" + data.user_id + "&player=" + player + "&botResponse=true";
         }
 
 
@@ -139,7 +140,7 @@
         ctx.lineTo(centerX - ((4 + 1) * hexSize * .75), centerY - ((4 + .5) * (4 + 1) * hexSize * .43));
         ctx.lineTo(centerX - (4 * (4 + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[0] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -149,7 +150,7 @@
         ctx.lineTo(centerX + ((4 + 1) * hexSize * .75), centerY + ((4 + .5) * (4 + 1) * hexSize * .43));
         ctx.lineTo(centerX + (4 * (4 + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[0] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[0] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -159,7 +160,7 @@
         ctx.lineTo(centerX + ((4 + 1) * hexSize * .75), centerY - ((4 + .5) * (4 + 1) * hexSize * .43));
         ctx.lineTo(centerX + (4 * (4 + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[1] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -169,7 +170,7 @@
         ctx.lineTo(centerX - ((4 + 1) * hexSize * .75), centerY + ((4 + .5) * (4 + 1) * hexSize * .43));
         ctx.lineTo(centerX - (4 * (4 + 1.5) * hexSize * .75), centerY);
         ctx.lineTo(centerX, centerY);
-        ctx.fillStyle = axes[1] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[1] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -189,7 +190,7 @@
             ctx.lineTo(baseX - (hexSize * .75), baseY - ((4 + 1) * hexSize * .43));
             ctx.lineTo(baseX - ((4 + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[2] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -199,7 +200,7 @@
             ctx.lineTo(baseX + (hexSize * .75), baseY + ((4 + 1) * hexSize * .43));
             ctx.lineTo(baseX + ((4 + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[2] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[2] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -209,7 +210,7 @@
         ctx.lineTo(baseX - (hexSize * .75), baseY + ((4 + 1) * hexSize * .43));
         ctx.lineTo(baseX - ((4 + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[3] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -219,7 +220,7 @@
         ctx.lineTo(baseX + (hexSize * .75), baseY - ((4 + 1) * hexSize * .43));
         ctx.lineTo(baseX + ((4 + .5) * hexSize * .75), baseY);
         ctx.lineTo(baseX, baseY);
-        ctx.fillStyle = axes[3] === 1 ? "blue" : "red";
+        ctx.fillStyle = axes[3] === 1 ? '#1010c0' : '#d00000';
         ctx.fill();
         ctx.stroke();
 
@@ -312,7 +313,6 @@
             <button class="size-btn" onclick="setSize(2)" id = "size-btn-2">2</button>
             <button class="size-btn" onclick="setSize(3)" id = "size-btn-3">3</button>
             <button class="size-btn" onclick="setSize(4)" id = "size-btn-4">4</button>
-            <button class="size-btn" onclick="setSize(5)" id = "size-btn-5">5</button>
         </div>
             <button class="main-btn" onclick="startTutorial()">Tutorial</button>
             <button class="main-btn" onclick="localGame()">Local Game</button>

@@ -232,19 +232,6 @@ def play4d(data: PlayRequest):
     board["player"] = -board.get("player")
     if findSurface(set):
         board["victory"] = -board.get("player") 
-    if (data.botResponse and board.get("victory") == 0):
-        subBoard = board.get("space")
-        bestMove = evalMove(board.get("space"))
-        for value in bestMove:
-            subBoard = subBoard[value]
-        if board.get("player") == 1:
-            set = board.get("posSet")
-        else:
-            set = board.get("negSet")
-        subBoard.changePlayer4d(board.get("player"), board.get("space"), set, board.get("zeroBounds"), board.get("fullBounds"))
-        board["player"] = -board.get("player")
-        if findSurface(set):
-            board["victory"] = -board.get("player") 
     arrayBoard = boardTo4dArray(board.get("space"), data.coordOrder)
       
     return {"cells": arrayBoard, "victory": board.get("victory"), "player": board.get("player"), "coordOrder": data.coordOrder}
@@ -377,7 +364,7 @@ def adjInit(coords, size):
 def evalMove(cells):
     size = len(cells)
     tally = [[[[0]*size for i in range(size)] for j in range(size)] for k in range(size)]
-    for i in range(100):
+    for i in range(200):
         simBoard = boardSetUp(size)
         for i in range(size):
             for j in range(size):
