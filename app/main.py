@@ -364,7 +364,7 @@ def adjInit(coords, size):
 def evalMove(cells):
     size = len(cells)
     tally = [[[[0]*size for i in range(size)] for j in range(size)] for k in range(size)]
-    for i in range(200):
+    for i in range(100):
         simBoard = boardSetUp(size)
         for i in range(size):
             for j in range(size):
