@@ -120,6 +120,7 @@ def getId():
 
 class JoinGameRequest(BaseModel):
     user_id: str
+    player: int | None = None
 
 @app.post("/joinGame")
 def joinGame(data: JoinGameRequest):
@@ -130,7 +131,10 @@ def joinGame(data: JoinGameRequest):
     if board["joined"] == 1 or board["joined"] == -1:
         board["joined"] = -board["joined"]
     else:
-        board["joined"] = random.choice([1, -1])
+        if data.player is None or data.player == 0:
+            board["joined"] = random.choice([1, -1])
+        else:
+            board["joined"] = data.player
     cells = boardTo4dArray(board.get("space"), [0, 2, 1, 3])
     return {"player": board["joined"], "cells": cells}
 
