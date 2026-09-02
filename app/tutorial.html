@@ -104,16 +104,18 @@ body {
       let slide = 0;
       let is2d = false;
       let manCoords = false;
+      let victoryInt = 0;
 
       async function displaySlide(slide){
+        clearEdges();
 
-        if (slide === 26){
+        if (slide === 23){
           document.getElementById("nextButton").innerHTML = "End";
         }
         else if (slide === 0){
           document.getElementById("previousButton").style.display = "none";
         }
-        else if (slide === 27){
+        else if (slide === 24){
             window.location.href = "/"
         }
         else {
@@ -129,13 +131,20 @@ body {
           body: JSON.stringify({ user_id: gameId, slide: slide, coordOrder: coordOrder }),
         });
         const data = await response.json();
+
         document.getElementById("slideText").innerHTML = data.text;
         document.getElementById("slideText").style.display = "block";
+
         boardSize = data.size;
         is2d = data.is2d;
+        victoryInt = data.victory;
+        markedCoords = data.marked;
+        localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+
         if(manCoords !== data.manCoords){
             toggleCoords();
         }
+
         if (data.is2d){
             c = document.getElementById("myCanvas");
             ctx = c.getContext("2d");
@@ -147,21 +156,28 @@ body {
         else {
             render4dHexGrid(data.board);
         }
+
+        if (data.changeOrder){
+            newOrder(data.coordShift);
+        }
+        
+        
+        
         localStorage.setItem("storedCells", JSON.stringify(data.board));
         document.getElementById("player").innerHTML = data.player === 1 ? "Blue" : "Red";
         document.getElementById("TurnDisplay").style.backgroundColor = curPlayer === 1 ? "#0f72e2" : "#d20d0d";
         document.getElementById("sidebar").style.backgroundColor = curPlayer === 1 ? "#0f72e2" : "#d20d0d";
-        if (data.marking){clearMarking();}
-        for (let i = 0; i < data.marked.length; i++) {
-            mark(data.marked[i]);
+        //if (data.marking){clearMarking();}
+        //for (let i = 0; i < data.marked.length; i++) {
+        //    mark(data.marked[i]);
+        //}
+        
+        if (data.btriangleShow){
+          renderTriangles(1);
         }
-        if (data.victory === 1){
-          victory(1);
+        if (data.rtriangleShow){
+          renderTriangles(-1);
         }
-        else if (data.victory === -1){
-          victory(-1);
-        }
-
         
 
       }
@@ -380,6 +396,7 @@ body {
 
       function render4dHexGrid(cells, incOthers = true) {
         if (!cells){return;}
+        if (is2d){return;}
         localStorage.setItem("storedCells", JSON.stringify(cells));
         storedCells = cells;
         var c = document.getElementById("myCanvas");
@@ -475,6 +492,9 @@ body {
           renderTriangles();
           renderEdges();
         }
+        if (victoryInt !== 0) {
+          victory(victoryInt);
+        }
     }
 
       async function playAt(coords) {
@@ -525,10 +545,7 @@ body {
           document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
         }
 
-        if (data.victory !== 0) {
-            gameOver = true;
-            victory(data.victory);
-        }
+        victoryInt = data.victory;
       }
 
       async function mark(coords){
@@ -849,8 +866,12 @@ async function newOrder(choice){
     }
     markedCoords = newMarkedCoords;
     localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
-
-    render4dHexGrid(data.board);
+    if (is2d){
+      render2dHexGrid(data.board[0][0], centerX, centerY, ctx, [1, 1, 1, -1]);
+    }
+    else {
+        render4dHexGrid(data.board);
+    }
 }
 
 function victory(player){

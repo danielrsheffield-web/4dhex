@@ -14,7 +14,7 @@ True
 3
 
 True
-0,2,1,3
+1
 False
 Welcome to the game of Four Dimensional Hex!
 {{1}}
@@ -26,7 +26,8 @@ This nested board structure represents a four dimensional space. Each board is a
 {{2}}
 2d - c
 False
-False
+True
+1
 False
 A hex in a two dimensional board can be represented by two coordinates. (x and y)
 {{3}}
@@ -40,9 +41,9 @@ In a four dimensional board, four coordinates are required. u and v represent th
 False
 False
 False
-Hover over a hex. It will display all hexes adjacent to it. In 2d hex, each hex has 6 neighbors (though some might be off the edge of the board). In 4d hex, each hex has 30 neighbors, 6 on its own board, and 4 on each board adjacent to that board.
+Hover over a hex. It will display all hexes adjacent to it. In 2d hex, each hex has 6 neighbors (unless it's on the edge). In 4d hex, each hex has up to 30 neighbors, 6 on its own board, and 4 on each board adjacent to that board. Only the very middle cell of the 3x3x3x3 actually has all thirty neighbors, as every other cell is on the edge in one way or another.
 {{5}}
-4d
+4d - c
 False
 False
 False
@@ -72,8 +73,7 @@ Having u and v be the outer axes and x and y be in inner axes is completely arbi
 True
 4
 r 0,2,0,3 | r 0,2,0,2 | r 0,1,0,1 | r 0,1,0,0
-True
-0,2,1,3
+False
 False
 In 2d hex, the goal is to create a path from one side of the board to the other. This path consists of edges between hexes. Click "Show Red Edges" to view this path.
 {{10}}
@@ -82,123 +82,109 @@ True
 3
 
 True
-0,2,1,3
+1
 False
-In 4d hex, the goal is to create a surface that spans the board. A surface consists of triangles between hexes in the same way a path consists of edges. (A triangle is just three hexes you've claimed that are all adjacent to each other.)
+In 4d hex, the goal is to create a surface around the edges of the board. A surface consists of triangles between hexes in the same way a path consists of edges. (A triangle is just three hexes you've claimed that are all adjacent to each other.)
 {{11}}
 4d
 False
 False
 False
-Each player has two axes they are supposed to be spanning. Currently, blue is trying to span the outer dimensions, and red is trying to span the inner dimensions, as indicated by the colors wrapping the boards.
+Each player has two axes they are supposed to form their surface across. Currently, blue is trying to form a surface across the outer dimensions, and red is trying to form a surface across the inner dimensions.
 {{12}}
-4d
-True
-3
-r 0,0,0,0 | r 0,0,0,1 | r 0,0,0,2 | r 0,1,0,0 | r 0,1,0,1 | r 0,1,0,2 | r 0,2,0,0 | r 0,2,0,1 | r 0,2,0,2
-True
-0,2,1,3
-False
-Red has created a spanning surface here, as they have fully claimed the top board. Click "Show Red Triangles" to view the triangles that comprise this board. If you switch to the "Red Spanning" setting though, they have a surface that goes across the boards.
-{{13}}
 4d
 True
 3
 b 0,0,0,0 | b 0,0,1,0 | b 0,0,2,0 | b 1,0,0,0 | b 1,0,1,0 | b 1,0,2,0 | b 2,0,0,0 | b 2,0,1,0 | b 2,0,2,0
 True
-0,2,1,3
+1
 False
 Blue has a spanning surface here, as they have the top of every board, thus creating a connected surface. This spans the outer coordinates in the same way that red's surface spanned the inner coordinates.
+{{13}}
+4d - b
+False
+True
+1
+False
+Click the "Show Blue Triangles" button to see all the triangles composing the surface. They form a sort of "blanket" over the grid, and its boundary covers the outside of the grid. You might be thinking that the hexes in the bottom don't touch the edge, but since each board is a piece of the 4d space, all the boards, except the middle, are adjacent to the edge.
 {{14}}
-4d
+4d - b
 True
 3
 b 0,0,0,0 | b 0,0,1,1 | b 0,0,2,2 | b 1,1,0,0 | b 1,1,1,1 | b 1,1,2,2 | b 2,2,0,0 | b 2,2,1,1 | b 2,2,2,2
 False
 False
-This surface doesn't have the same hex claimed on every board, but it still spans the outer boards, making it a winning surface.
+This surface doesn't have the same hex claimed on every board, but it still forms a blanket across the whole board.
 {{15}}
-4d
+4d 
+True
+3
+b 0,0,0,1 | b 0,1,0,1 | b 0,1,0,0 | b 0,0,1,2 | b 1,2,0,0 | b 0,0,2,2 | b 2,2,0,0 | b 1,0,1,2 | b 1,0,1,1 | b 1,1,1,1 | b 1,1,1,0 | b 1,2,1,0 | b 1,0,2,2 | b 2,2,1,0 | b 2,1,2,2 | b 2,1,2,1 | b 2,2,2,1
+True
+1
 False
-False
-False
-To span the out boards you must at least form the eight "principal triangles." These are the triangles between hex boards when you are "spanning".
+This surface is a lot more complicated, but since all the triangles connect to each other and from a blanket over the whole grid, it works.
 {{16}}
-4d
+4d - b
+True
+3
+b 0,1,0,1 | b 1,1,0,1 | b 2,1,0,1 | b 0,1,1,1 | b 0,1,2,1 | b 1,1,1,1 | b 1,2,2,1 | b 2,1,1,2 | b 2,2,2,1 | b 2,1,2,2
+True
+1
 False
-False
-False
-In general, it is easier to see what is necessary to complete a surface for a player that is "spanning," that is, spanning the outer coordinates. In the "Blue Spanning" setting, blue is spanning the outer coordinates and in the "Red Spanning" setting, red is spanning the outer coordinates. 
+This position is especially confusing, as blue does not have a surface here. The bottom triangles visually overlap, but they don't actually link up. The boundary of this "blanket" doesn't stay around the outside of the grid, instead having a small inlet.
 {{17}}
-4d
+4d - b
+True
+3
+b 0,1,0,1 | b 1,1,0,1 | b 2,1,0,1 | b 0,1,1,1 | b 0,1,2,1 | b 1,1,1,1 | b 1,2,2,1 | b 2,1,1,2 | b 2,2,2,1 | b 2,1,2,2 | b 2,1,2,1
+True
+1
 False
-False
-False
-The main flow of the game consists of trying to form more and more triangles, and blocking your opponent from doing the same. Switch between different view to see your enemy's plans
+This, however, is a winning surface, as the gap is filled by more triangles.
 {{18}}
 4d
 True
 3
-r 0,1,1,1 | r 1,1,2,1
+
 True
-0,2,1,3
-True
-0,2,1,1
-Part of this involves making sure you have multiple open options. In this position, if red wants to make a triangle with the leftmost board, they only have one option. Blue could easily claim that hex, making them scramble for a way around it.
+2
+False
+In the "Red Spanning" view, red is trying to create a blanket. In general, it's easier to see what you need to do to complete a surface when in the view where you're "spanning", and easier to see how to block your opponent in the view where they're spanning.
 {{19}}
 4d
-True
-3
-r 0,1,1,1 | r 1,2,2,1
 False
 True
-0,2,1,1 | 0,2,2,1
-In this position, however, red has two options, so even if blue claims one of them, they can fall back on the other. Try to set up these situations as much as you can. In addition, since red's effectively already claimed this triangle, they don't need to waste a move playing there until the end of the game, or if blue blocks one of their options.
+1
+False
+The main flow of the game consists of trying to form triangles between boards and expand your surface, while trying to prevent your opponent from doing the same.
 {{20}}
 4d
 True
 3
-b 0,0,0,0 | b 0,0,1,1 | b 0,0,2,2 | b 1,1,0,0 | b 1,1,1,1 | b 1,1,2,2 | b 2,2,0,0 | b 2,2,1,1 | b 2,1,2,2 | b 2,2,2,1
+b 0,1,1,1 | b 1,1,2,1
 True
-0,2,1,3
-False
-It can sometimes be hard to tell what consitutes a surface. In this position, blue has all the triangles between boards, but they don't link up. The triangles connected to the bottom board rely on different hexes, failing to make a true spanning surface.
+1
+True
+0,2,1,1
+Part of this involves trying to keep multiple open options. In this position, blue has only one way to form a triangle with the leftmost board (that hex is marked in yellow). Red can easily block it, forcing blue to scramble for an alternate route.
 {{21}}
-4d
-False
-False
-True
-2,2,1,1
-To close this gap, blue must create more triangles. Playing in the center of the bottom board creates two more triangles, both between the bottom and center boards. This plugs the gap, allowing blue to win.
-{{22}}
 4d
 True
 3
-b 0,0,0,0 | b 0,0,1,1 | b 0,0,2,2 | b 1,1,0,0 | b 1,1,1,1 | b 1,1,2,2 | b 2,2,0,0 | b 2,2,1,1 | b 2,1,2,2 | b 2,2,2,1 | r 2,1,2,1 | r 2,2,2,2
+b 0,1,1,1 | b 1,1,2,2
 True
-0,2,1,3
-False
-But what if red's blocking that chance at connection?
-{{23}}
-4d
-False
-False
+1
 True
-2,1,1,1
-In that case, blue has to try to establish an alternate network. By claiming the center hex of the lower right board, they can create new a triangle between the center, lower right, and bottom boards. This one, however, connects to the left hex in the bottom board, thus sealing the gap.
-{{24}}
-4d
-False
-False
-False
-The view where you are "spanning" often makes it easier to see what you need to do to build a surface, while the view where the opponent is spanning makes it easier to see how to block them. Switch between them liberally.
-{{25}}
+0,2,1,1 | 0,2,1,2
+In this position, however, they have two options, so even if red blocks one, they can claim the other. That triangle is good as claimed by blue.
+{{22}}
 4d
 False
 False
 False
 To keep track of things, you can right click a hex to mark it. Marked hexes persist as you change the view. They have no gameplay impact, but can be very useful to keep notes on your plan.
-{{26}}
+{{23}}
 4d
 False
 False

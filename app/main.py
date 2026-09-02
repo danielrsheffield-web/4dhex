@@ -281,7 +281,11 @@ def readTutorial(data: TutorialRequest):
     size = 3
     is2d = False
     manCoords = False
+    btriangleShow = False
+    rtriangleShow = False
     coordOrder = data.coordOrder
+    changeOrder = False
+    coordShift = 0
     marked = []
     board = user_boards.get(data.user_id)
     if board is None:
@@ -297,10 +301,14 @@ def readTutorial(data: TutorialRequest):
         is2d = True
     if ("c" in lines[curLine]):
         manCoords = True
+    if ("b" in lines[curLine]):
+        btriangleShow = True
+    if ("r" in lines[curLine]):
+        rtriangleShow = True
     curLine += 1
     if (lines[curLine].strip() == "True"):
         curLine += 1
-        size = int(lines[curLine])
+        size = int(lines[curLine].strip())
         board = boardSetUp(size)
         curLine += 1
         moves = lines[curLine].split("|")
@@ -320,9 +328,8 @@ def readTutorial(data: TutorialRequest):
     curLine += 1
     if (lines[curLine].strip() == "True"):
         curLine += 1
-        coordOrder = lines[curLine].split(",")
-        for i in range(len(coordOrder)):
-            coordOrder[i] = int(coordOrder[i])
+        coordShift = int(lines[curLine].strip())
+        changeOrder = True
     curLine += 1
     marking = (lines[curLine].strip() == "True")
     if marking:
@@ -345,7 +352,8 @@ def readTutorial(data: TutorialRequest):
         victory = -1
     
     user_boards[data.user_id] = board
-    return {"text": text, "victory": victory, "coordOrder": coordOrder, "marked": marked, "board": boardTo4dArray(board.get("space"), coordOrder), "marked": marked, "size": size, "is2d": is2d, "manCoords": manCoords}
+    print(marked)
+    return {"text": text, "victory": victory, "coordShift": coordShift, "changeOrder": changeOrder, "marked": marked, "board": boardTo4dArray(board.get("space"), coordOrder), "marked": marked, "size": size, "is2d": is2d, "manCoords": manCoords, "btriangleShow": btriangleShow, "rtriangleShow": rtriangleShow}
 
 def adjBuilder(coords, first, sign, size):
   if first == len(coords):

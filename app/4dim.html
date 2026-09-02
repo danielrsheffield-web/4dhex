@@ -860,6 +860,10 @@ function writeCoords(coords, x, y, ctx){
   }
   ctx.fillText(newCoords.join(","), x, y);
 }
+
+function returnToMenu () {
+  window.location.href = "/";
+}
     </script>
   </head>
   <body>
@@ -882,6 +886,7 @@ function writeCoords(coords, x, y, ctx){
       <button onclick="newOrder(2)" id="axisButton2">Red Spanning</button>
       <button onclick="newOrder(3)" id="axisButton3">Cross</button>
       <button onclick="toggleCoords()" id="coordsButton">Show Coords</button>
+      <button onclick="returnToMenu()">Exit to Menu</button>
       </aside>
 <main class="main-content">
     <span id="error"></span>
