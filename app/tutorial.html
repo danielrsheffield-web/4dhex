@@ -235,6 +235,7 @@ body {
             x = baseX + ((i - j) * hexSize * .75)
             y = baseY + ((i + j) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
             newCoords = coords.concat(i, j);
+            console.log(newCoords.join(", "));
             drawHex(x, y, cells[i][j], ctx, newCoords);
           }
         }
@@ -909,6 +910,11 @@ function writeCoords(coords, x, y, ctx){
   ctx.font = "12px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  if (is2d){
+    newCoords = [3 - coords[0], 3 - coords[1]];
+    ctx.fillText(newCoords.join(","), x, y);
+    return;
+  }
   newCoords = [0, 0, 0, 0]
   canonOrder = [0, 2, 1, 3]
   for (let i = 0; i < coords.length; i++) {
