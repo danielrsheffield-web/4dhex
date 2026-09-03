@@ -126,17 +126,19 @@ class JoinGameRequest(BaseModel):
 def joinGame(data: JoinGameRequest):
     user_id = data.user_id
     board = user_boards.get(user_id)
+    isHost = False
     if board is None:
         return {"error": "No board for this user"}
     if board["joined"] == 1 or board["joined"] == -1:
         board["joined"] = -board["joined"]
     else:
+        isHost = True
         if data.player is None or data.player == 0:
             board["joined"] = random.choice([1, -1])
         else:
             board["joined"] = data.player
     cells = boardTo4dArray(board.get("space"), [0, 2, 1, 3])
-    return {"player": board["joined"], "cells": cells}
+    return {"player": board["joined"], "cells": cells, "isHost": isHost}
 
 @app.post("/start4dGame")
 def start_4d_game(data: StartGameRequest):

@@ -318,7 +318,7 @@
         });
         const data = await response.json();
         localStorage.setItem("cells", JSON.stringify(data.cells));
-        window.location.href = "/playGame?size=" + data.cells.length + "&game_id=" + game_id + "&player=" + data.player;
+        window.location.href = "/playGame?size=" + data.cells.length + "&game_id=" + game_id + "&player=" + data.player + "&isHost=" + data.isHost;
     }
 
     function startJoin() {

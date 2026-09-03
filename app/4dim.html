@@ -606,6 +606,9 @@ body {
         if (player !== 0 && !botResponse){
           document.getElementById("gameId").innerHTML = "Game Code: " + gameId;
         }
+        if (new URLSearchParams(window.location.search).get("isHost") === "true"){
+          alert("To have another player join, have them click Join Game and enter this code: " + gameId);
+        }
       }
 
       function adjInit(coords) {
