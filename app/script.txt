@@ -35,9 +35,9 @@ A hex in a two dimensional board can be represented by two coordinates. (x and y
 False
 False
 False
-In a four dimensional board, four coordinates are required. u and v represent the board you're on, and the x and y coordinates represent the position within the board.
+In a four dimensional board, four coordinates are required. For a point (u,v,x,y), u and v represent the board you're on, and the x and y coordinates represent the position within the board.
 {{4}}
-4d
+4d - c
 False
 False
 False
@@ -47,7 +47,7 @@ Hover over a hex. It will display all hexes adjacent to it. In 2d hex, each hex 
 False
 False
 False
-The basic rule is that a hex is adjacent to another if you can get from one to another by increasing some coordinates by 1 and leaving others alone, or by decreasing some coordinates by 1 and leaving others alone, but not mixing increasing and decreasing coordinates. As such, on the boards above the hex in question, the hexes with a position directly above the original hex's position, and one the boards below, the positions below are adjacent.
+The basic rule is that a hex is adjacent to another if you can get from one to another by increasing some coordinates by 1 and leaving others alone, or by decreasing some coordinates by 1 and leaving others alone, but not mixing increasing and decreasing coordinates. As such, on the boards above the hex in question, the hexes with a position directly above the original hex's position, and on the boards below, the positions below are adjacent.
 {{6}}
 4d
 False
@@ -67,7 +67,7 @@ True
 
 False
 False
-Having u and v be the outer axes and x and y be in inner axes is completely arbitrary. If you click the "Red Spanning" or "Cross" buttons on the side (We'll explain what those terms mean later), it'll show a different view, where the coordinates take on different roles.  The hexes don't change, they are simply displayed in a different arrangement.
+Having u and v be the outer axes and x and y be in inner axes is completely arbitrary. If you click the "Red Spanning" or "Cross" buttons on the side (We'll explain what those terms mean later), it'll show a different view, where the coordinates take on different roles.  The hexes don't change, they are simply displayed in a different arrangement. In the Red Spanning view, x and y serve as the outer coordinates, describing which board a hex is on, while u and v are the inner coordinates.
 {{9}}
 2d
 True
@@ -84,13 +84,13 @@ True
 True
 1
 False
-In 4d hex, the goal is to create a surface around the edges of the board. A surface consists of triangles between hexes in the same way a path consists of edges. (A triangle is just three hexes you've claimed that are all adjacent to each other.)
+In 4d hex, the goal is to create a surface around the edges of the board. A surface consists of triangles between hexes in the same way a path consists of edges. We say that three hexagons form the vertices of a "triangle" if each one is adjacent to the other two.  We can illustrate this by drawing a shaded triangle whose corners are the centers of those hexagons.
 {{11}}
 4d
 False
 False
 False
-Each player has two axes they are supposed to form their surface across. Currently, blue is trying to form a surface across the outer dimensions, and red is trying to form a surface across the inner dimensions.
+Each player is trying to form a surface along different dimensions, and it's impossible for them both to form surfaces. This tutorial will primarily focus on what constitues a surface, as it can be counterintuitive.
 {{12}}
 4d
 True
@@ -132,7 +132,7 @@ b 0,1,0,1 | b 1,1,0,1 | b 2,1,0,1 | b 0,1,1,1 | b 0,1,2,1 | b 1,1,1,1 | b 1,2,2,
 True
 1
 False
-This position is especially confusing, as blue does not have a surface here. The bottom triangles visually overlap, but they don't actually link up. The boundary of this "blanket" doesn't stay around the outside of the grid, instead having a small inlet.
+This position is especially confusing, as it is not a victory for blue, though it looks like it should be. The bottom triangles visually overlap, but they don't actually link up. The boundary of this "blanket" doesn't stay around the outside of the grid, instead having a small inlet.
 {{17}}
 4d - b
 True
