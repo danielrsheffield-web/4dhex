@@ -834,6 +834,9 @@ async function botMove() {
             document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
           }
         }
+    if (data.victory){
+      victory(data.player);
+    }
 }
 
 function toggleCoords() {
