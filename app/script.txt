@@ -78,12 +78,12 @@ True
 True
 1
 False
-In 4d hex, the goal is to create a surface around the edges of the board. Each player is trying to form a surface along different dimensions, and it's impossible for them both to form surfaces. This tutorial will primarily focus on what constitues a surface, as it can be counterintuitive.
+In 4d hex, the goal is to create a surface around the edges of the board. Each player is trying to form a surface along different dimensions, and it's impossible for them both to form winning surfaces. This tutorial will primarily focus on what constitues a winning surface, as it can be counterintuitive.
 {{11}}
 4d - b
 True
 3
-b 0,0,0,0 | b 0,0,1,0 | b 1,0,0,0
+b 0,0,0,0 | b 0,0,1,0 | b 1,0,1,0
 True
 1
 False
@@ -106,14 +106,14 @@ False
 False
 This is another winning surface for blue. Even though the hexes claimed on each board are different, since they still connect to form the same triangles between boards, it works.
 {{14}}
-4d 
+4d - b
 True
 3
 b 0,0,0,1 | b 0,1,0,1 | b 0,1,0,0 | b 0,0,1,2 | b 1,2,0,0 | b 0,0,2,2 | b 2,2,0,0 | b 1,0,1,2 | b 1,0,1,1 | b 1,1,1,1 | b 1,1,1,0 | b 1,2,1,0 | b 1,0,2,2 | b 2,2,1,0 | b 2,1,2,2 | b 2,1,2,1 | b 2,2,2,1
 True
 1
 False
-This surface is a lot more complicated, but since all the triangles connect to each other and from a blanket over the whole grid, it works.
+This winning surface is a lot more complicated, but since all the triangles connect to each other and from a blanket over the whole grid, it works.
 {{15}}
 4d - b
 True
@@ -133,20 +133,21 @@ True
 False
 This, however, is a winning surface, as the gap is filled by more triangles.
 {{17}}
+4d
 True
 3
 r 0,0,0,0 | r 0,0,1,1 | r 0,1,1,0 | r 1,0,1,2 | r 1,1,1,1 | r 1,2,2,0 | r 1,2,2,1 | r 1,2,2,2 | r 1,1,2,2
 True
 1
 False
-Red's goal is harder to see in this view. They can win by completely filling one board, but their other approaches are often hard to wrap your head around. For instance, this surface seems completely bizarre.
+Red's goal is harder to see in this view. They can win by completely filling one board, but their other approaches are often hard to wrap your head around. For instance, this winning surface seems completely bizarre.
 {{18}}
 4d - r
 False
 True
 2
 False
-In the "Red Spanning" view, however, red is trying to create a blanket, just as blue was trying to in the "Blue Spanning" view. This is the same surface as the previous slide, but it's much clearer how it works. In general, it's easier to see what you need to do to complete a surface when in the view where you're "spanning", and easier to see how to block your opponent in the view where they're spanning.
+In the "Red Spanning" view, however, red is trying to create a blanket, just as blue was trying to in the "Blue Spanning" view. This is the same surface as the previous slide, but it's much clearer how it works. In general, it's easier to see what you need to do to complete a winning surface when in the view where you're "spanning", and easier to see how to block your opponent in the view where they're spanning.
 {{19}}
 4d
 False

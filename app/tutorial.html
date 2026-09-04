@@ -173,11 +173,12 @@ body {
         //}
         
         if (data.btriangleShow){
-          renderTriangles(1);
+          showTriangles(1);
         }
         if (data.rtriangleShow){
-          renderTriangles(-1);
+          showTriangles(-1);
         }
+        console.log(String(data.btriangleShow) + " " + String(data.rtriangleShow));
         
 
       }
@@ -235,7 +236,6 @@ body {
             x = baseX + ((i - j) * hexSize * .75)
             y = baseY + ((i + j) * hexSize * .43) - ((boardSize - 1) * hexSize * .43)
             newCoords = coords.concat(i, j);
-            console.log(newCoords.join(", "));
             drawHex(x, y, cells[i][j], ctx, newCoords);
           }
         }

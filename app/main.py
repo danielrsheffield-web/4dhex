@@ -354,7 +354,6 @@ def readTutorial(data: TutorialRequest):
         victory = -1
     
     user_boards[data.user_id] = board
-    print(marked)
     return {"text": text, "victory": victory, "coordShift": coordShift, "changeOrder": changeOrder, "marked": marked, "board": boardTo4dArray(board.get("space"), coordOrder), "marked": marked, "size": size, "is2d": is2d, "manCoords": manCoords, "btriangleShow": btriangleShow, "rtriangleShow": rtriangleShow}
 
 def adjBuilder(coords, first, sign, size):
