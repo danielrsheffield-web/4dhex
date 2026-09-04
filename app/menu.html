@@ -309,7 +309,10 @@
             document.getElementById("playerPanel").style.visibility = "visible";
     }
 
-    async function joinGame(player) {
+    async function joinGame(player, event = null) {
+        if (event) {
+            event.preventDefault();
+        }
         const game_id = String(document.getElementById("game-id-input").value);
         const response = await fetch("/joinGame", {
             method: "POST",
@@ -317,6 +320,10 @@
             body: JSON.stringify({ user_id: game_id, player: player }),
         });
         const data = await response.json();
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
         localStorage.setItem("cells", JSON.stringify(data.cells));
         window.location.href = "/playGame?size=" + data.cells.length + "&game_id=" + game_id + "&player=" + data.player + "&isHost=" + data.isHost;
     }
@@ -365,8 +372,8 @@
             <button class="main-btn" onclick="botGame()">Bot Game</button>
             <button class="main-btn" onclick="onlineGame()">Host Game</button>
             <button class="main-btn" onclick="startJoin()">Join Game</button>
-            <form>
-                <input style="visibility: hidden;" type="text" name="game_id" placeholder="Game Code" id = "game-id-input" style="font-size: 16px;">
+            <form onsubmit="joinGame(0, event)">
+                <input style="visibility: hidden;" type="text" name="game_id" placeholder="Game Code" id = "game-id-input" style="font-size: 16px;" onkeydown="if(event.key === 'Enter'){joinGame(0, event)}">
             </form>
         </div>
         </div>
