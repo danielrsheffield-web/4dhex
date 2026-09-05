@@ -1,12 +1,19 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from gf2_lin_algebra import GF2Matrix
+from pathlib import Path
 from pydantic import BaseModel
 import random
 
 
 app = FastAPI(title="Hex")
+app.mount(
+    "/voronoi",
+    StaticFiles(directory=Path(__file__).resolve().parent / "voronoi", html=True),
+    name="voronoi",
+)
 
 # Hash table: user_id -> board
 user_boards: dict[str, list] = {}
