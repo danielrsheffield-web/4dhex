@@ -41,7 +41,7 @@ In a four dimensional board, four coordinates are required. For a point (u,v,x,y
 False
 False
 False
-Hover over a hex. It will display all hexes adjacent to it. In 2d hex, each hex has 6 neighbors (unless it's on the edge). In 4d hex, each hex has up to 30 neighbors, 6 on its own board, and 4 on each board adjacent to that board. Only the very middle cell of the 3x3x3x3 actually has all thirty neighbors, as every other cell is on the edge in one way or another. The basic rule is that a hex is adjacent to another if you can get from one to another by increasing some coordinates by 1 and leaving others alone, or by decreasing some coordinates by 1 and leaving others alone, but not mixing increasing and decreasing coordinates.
+Hover over a hex. It will display all hexes adjacent to it. In 2d hex, each hex has 6 neighbors (unless it's on the edge). In 4d hex, each hex has up to 30 neighbors, 6 on its own board, and 4 on each board adjacent to that board. Only the very middle cell of the 3x3x3x3 actually has all thirty neighbors, as every other cell is on the edge in one way or another. The basic rule is that a hex is adjacent to another if you can get from one to the other by increasing some coordinates by 1 and leaving others alone, or by decreasing some coordinates by 1 and leaving others alone, but not mixing increasing and decreasing coordinates.
 {{5}}
 4d
 False
@@ -61,13 +61,14 @@ True
 
 False
 False
-We mentioned earlier that u and v denote which board you are on and x and y denote position within a board. But in fact, this is only one way to visualize the 4-dimensional board. If you click the "Red Spanning" or "Cross" buttons on the side (We'll explain what those terms mean later), it'll show a different view, where the coordinates take on different roles.  The hexes don't change, they are simply displayed in a different arrangement. In the Red Spanning view, x and y serve as the outer coordinates, describing which board a hex is on, while u and v are the inner coordinates.
+We mentioned earlier that u and v denote which board you are on and x and y denote position within a board. But in fact, this is only one way to visualize the 4-dimensional space. If you click the "Red Spanning" or "Cross" buttons on the side (We'll explain what those terms mean later), it'll show a different view, where the coordinates take on different roles.  The hexes don't change, they are simply displayed in a different arrangement. In the Red Spanning view, x and y serve as the outer coordinates, describing which board a hex is on, while u and v are the inner coordinates.
 {{8}}
 2d
 True
 4
 r 0,2,0,3 | r 0,2,0,2 | r 0,1,0,1 | r 0,1,0,0
-False
+True
+1
 False
 In 2d hex, the goal is to create a path from one side of the board to the other. This path consists of edges between hexes. Click "Show Red Edges" to view this path.
 {{9}}
@@ -96,7 +97,7 @@ b 0,0,0,0 | b 0,0,1,0 | b 0,0,2,0 | b 1,0,0,0 | b 1,0,1,0 | b 1,0,2,0 | b 2,0,0,
 True
 1
 False
-This is a winning blue surface. The triangles form a sort of "blanket" over the grid, and its boundary covers the outside of the grid. You might be thinking that the hexes in the bottom don't touch the edge, but since each board is a piece of the 4d space, all the boards, except the middle, are adjacent to the edge.
+This is a winning blue surface. The triangles form a sort of "blanket" over the grid, and its boundary lies in the outer boards.
 {{12}}
 4d - b
 True
@@ -131,7 +132,7 @@ b 0,1,0,1 | b 1,1,0,1 | b 2,1,0,1 | b 0,1,1,1 | b 0,1,2,1 | b 1,1,1,1 | b 1,2,2,
 True
 1
 False
-This, however, is a winning surface, as the gap is filled by more triangles.
+This, however, is a winning surface, as the gap is filled by more triangles. The boundary of the surface can stay in the outer boards.
 {{16}}
 4d
 True
