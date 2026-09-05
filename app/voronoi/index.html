@@ -3,113 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f4ef">
-  <title>Voronoi Explorer · Hex</title>
+  <title>Voronoi board</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/" aria-label="Hex home"><svg viewBox="0 0 32 34" aria-hidden="true"><path d="m16 2 13 7.5v15L16 32 3 24.5v-15Z M3 9.5l13 8 13-8 M16 17.5V32 M16 2v15.5"/></svg><span>HEX<span class="brand-divider">/</span><span class="brand-subtitle">Spatial lab</span></span></a>
-    <div class="header-right"><span class="page-tag">Voronoi explorer</span><span class="save-indicator" id="save-status" role="status"><i></i><span>Loading board</span></span></div>
-  </header>
-
-  <main>
-    <div class="intro">
-      <div><p class="eyebrow">Lattice study <span>001</span></p><h1>Space, cell by cell.</h1><p class="intro-copy">Explore a three-dimensional Voronoi tessellation of truncated octahedra.</p></div>
-      <div class="geometry-note"><span class="mini-cell" aria-hidden="true">⬡</span><div><strong>14 faces. One repeating cell.</strong><span>6 squares + 8 hexagons</span></div></div>
-    </div>
-
-    <div id="notice" class="notice" role="status" hidden></div>
-
-    <div class="workspace">
-      <aside class="controls" aria-label="Board controls">
-        <section class="control-section">
-          <div class="section-title"><h2>Board dimensions</h2><span class="section-number">01</span></div>
-          <p class="section-copy">A parallelepiped of M × M × N cells.</p>
-          <form id="dimensions-form">
-            <div class="dimension-fields">
-              <label>M <span>x & y</span><input id="dimension-m" type="number" min="1" max="12" value="3" required></label>
-              <span class="times" aria-hidden="true">×</span>
-              <label>N <span>z</span><input id="dimension-n" type="number" min="1" max="12" value="3" required></label>
-            </div>
-            <button class="primary full-width" type="submit">Update board <span aria-hidden="true">↗</span></button>
-          </form>
-          <p class="field-help">1–12 per dimension. Keeps cells in overlap.</p>
-        </section>
-
-        <section class="control-section">
-          <div class="section-title"><h2>Cell color</h2><span class="section-number">02</span></div>
-          <p class="section-copy">Choose an action, then click a cell.</p>
-          <div class="brushes" role="group" aria-label="Click action">
-            <button data-brush="inspect" aria-pressed="true"><span class="inspect-icon" aria-hidden="true">⌖</span>Inspect</button>
-            <button data-brush="1" aria-pressed="false"><i class="swatch blue"></i>Blue <kbd>1</kbd></button>
-            <button data-brush="-1" aria-pressed="false"><i class="swatch red"></i>Red <kbd>−1</kbd></button>
-            <button data-brush="0" aria-pressed="false"><i class="swatch transparent"></i>Clear <kbd>0</kbd></button>
-          </div>
-        </section>
-
-        <section class="control-section">
-          <div class="section-title"><h2>Look inside</h2><span class="section-number">03</span></div>
-          <label class="toggle-row" for="slice-enabled"><span>Isolate a z layer</span><input id="slice-enabled" type="checkbox" role="switch"></label>
-          <div class="layer-row"><label for="layer-range">z</label><input id="layer-range" type="range" min="1" max="3" value="1" disabled><output id="layer-value" for="layer-range">All</output></div>
-          <p class="field-help">Layers use the lattice coordinates below.</p>
-        </section>
-
-        <section class="control-section inspector">
-          <div class="section-title"><h2>Cell inspector</h2><span id="selected-state" class="state-label">No selection</span></div>
-          <form id="select-form">
-            <div class="coordinate-fields">
-              <label>x<input id="cell-x" type="number" min="1" max="3" value="1" required></label>
-              <label>y<input id="cell-y" type="number" min="1" max="3" value="1" required></label>
-              <label>z<input id="cell-z" type="number" min="1" max="3" value="1" required></label>
-              <button type="submit" class="select-button" title="Select cell at these coordinates" aria-label="Select cell at these coordinates">↗</button>
-            </div>
-          </form>
-          <p id="cell-position" class="field-help position-readout">Click a cell or enter its coordinates.</p>
-          <div class="selected-actions" role="group" aria-label="Set selected cell color">
-            <button data-value="1" disabled><i class="swatch blue"></i>Blue</button>
-            <button data-value="-1" disabled><i class="swatch red"></i>Red</button>
-            <button data-value="0" disabled><i class="swatch transparent"></i>Clear</button>
-          </div>
-        </section>
-      </aside>
-
-      <section class="board-panel" aria-label="Interactive Voronoi board">
-        <div class="board-toolbar">
-          <div class="board-title"><span class="live-dot"></span><h2>Lattice board</h2><span id="board-size" class="size-badge">3 × 3 × 3</span></div>
-          <div class="view-options" role="group" aria-label="Camera view"><button data-view="isometric" aria-pressed="true">3D</button><button data-view="top" aria-pressed="false">Top</button><button data-view="front" aria-pressed="false">Front</button></div>
-        </div>
-        <div class="viewport" id="viewport">
-          <div class="viewport-label"><span id="view-label">ORTHOGRAPHIC / 3D</span><span id="visible-count">27 CELLS</span></div>
-          <canvas id="board-canvas" tabindex="0" aria-label="3D truncated octahedron board. Drag to rotate, shift-drag to pan, scroll to zoom. Use the cell inspector to select and color cells by coordinates."></canvas>
-          <div class="canvas-error" id="canvas-error" role="alert" hidden></div>
-          <div id="hover-label" class="hover-label" hidden></div>
-          <div class="zoom-controls" role="group" aria-label="Zoom controls"><button id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out" title="Zoom out">−</button><span></span><button id="reset-view" aria-label="Reset view" title="Reset view"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
-          <div class="viewport-footer"><span>Drag to orbit <b>·</b> Scroll to zoom <b>·</b> Shift + drag to pan</span><span id="active-tool">⌖ Inspect mode</span></div>
-        </div>
-        <div class="board-summary">
-          <div class="counts"><span><i class="swatch blue"></i>Blue <strong id="blue-count">0</strong></span><span><i class="swatch red"></i>Red <strong id="red-count">0</strong></span><span><i class="swatch transparent"></i>Transparent <strong id="transparent-count">27</strong></span></div>
-          <button id="clear-board" class="text-button">Clear board</button>
-        </div>
-      </section>
-    </div>
-
-    <div class="lower-bar">
-      <div class="basis"><span class="eyebrow">Cell center</span><code>x(1, 1, 1) + y(1, −1, −1) + z(−1, −1, 1)</code><span class="basis-range">x, y ∈ [1, M] · z ∈ [1, N]</span></div>
-      <div class="data-actions"><button id="reload-data" class="text-button">↻ Reload saved data</button><button id="edit-data" class="text-button">Edit array <span aria-hidden="true">↗</span></button></div>
-    </div>
-    <footer class="page-footer"><span>BODY-CENTERED CUBIC LATTICE</span><span>L = 2ℤ³ ∪ ((1, 1, 1) + 2ℤ³)</span><a href="/">Back to Hex <span aria-hidden="true">↗</span></a></footer>
-  </main>
-
-  <dialog id="data-dialog" aria-labelledby="data-title">
-    <div class="dialog-heading"><div><p class="eyebrow">Board data</p><h2 id="data-title">The array behind the cells.</h2></div><button id="close-data" class="icon-button" aria-label="Close array editor">×</button></div>
-    <p>Each entry is <strong>1</strong> (blue), <strong>−1</strong> (red), or <strong>0</strong> (transparent). Use an M × M × N array; cell (x, y, z) is <code>cells[x-1][y-1][z-1]</code>.</p>
-    <label for="array-data" class="array-label">localStorage · <code>hex.voronoi.cells</code></label>
-    <textarea id="array-data" spellcheck="false" aria-describedby="array-error"></textarea>
-    <p id="array-error" class="array-error" role="alert"></p>
-    <div class="dialog-actions"><button id="download-data">Download current board</button><button id="apply-data" class="primary">Apply & save</button></div>
-  </dialog>
-  <noscript><p class="notice">Enable JavaScript to display the 3D board.</p></noscript>
+  <canvas id="board-canvas" aria-label="3D truncated octahedron board. Drag to rotate, shift-drag to pan, scroll to zoom."></canvas>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

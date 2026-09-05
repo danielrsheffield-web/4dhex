@@ -1,7 +1,8 @@
 # Hex
 
 The 3D Voronoi viewer displays the truncated-octahedron cells of the lattice
-`2 Z³ ∪ ((1, 1, 1) + 2 Z³)`. Open it at **http://127.0.0.1:8000/voronoi/**,
+`2 Z³ ∪ ((1, 1, 1) + 2 Z³)` in a canvas that fills the browser window.
+Open it at **http://127.0.0.1:8000/voronoi/**,
 or follow **3D Voronoi board** from the existing Hex menu.
 
 ## Run locally
@@ -22,10 +23,8 @@ to install or download.
 
 Drag the board to orbit, scroll to zoom, and Shift-drag or right-drag to pan.
 On touch screens, use one finger to orbit and two fingers to pan or pinch-zoom.
-Choose a click action to inspect, paint, or clear cells. The coordinate inspector
-can select any cell, including interior cells. **Isolate a z layer** makes one
-lattice layer visible without changing the saved array. Resizing keeps the
-overlapping cells; new entries start at zero.
+The page contains only the 3D display. Set cell colors and board dimensions
+through the JavaScript API or the stored array described below.
 
 ## Board data
 
@@ -77,14 +76,15 @@ localStorage.setItem("hex.voronoi.cells", JSON.stringify(cells));
 window.voronoiBoard.reload();
 ```
 
-A direct `localStorage.setItem()` in the same tab requires `reload()` or the
-viewer's **Reload** button to refresh the display. Changes in another tab on
+A direct `localStorage.setItem()` in the same tab requires `reload()` to refresh
+the display. Changes in another tab on
 the same origin refresh the viewer automatically through storage events.
 
-Invalid stored data produces a visible error and is not automatically
-overwritten. If browser storage is unavailable or a write fails, board edits
-remain available in memory for the current page; they may not survive a reload.
-**Edit array** accepts the same JSON format and can download the current board.
+Invalid stored data leaves the current board displayed, is not automatically
+overwritten, and produces an error in the browser console. Storage failures
+are also reported in the console. If browser storage is unavailable or a write
+fails, board edits remain available in memory for the current page; they may
+not survive a reload.
 
 ## Geometry tests
 

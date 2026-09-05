@@ -53,8 +53,9 @@ function compileProgram(gl) {
 
 /** Native, on-demand WebGL rendering of the unscaled BCC Voronoi cells. */
 export class BoardRenderer {
-  constructor(canvas, { onSelect = () => {}, onHover = () => {}, onViewChange = () => {} } = {}) {
+  constructor(canvas, { interactiveCells = true, onSelect = () => {}, onHover = () => {}, onViewChange = () => {} } = {}) {
     this.canvas = canvas;
+    this.interactiveCells = interactiveCells;
     this.onSelect = onSelect;
     this.onHover = onHover;
     this.onViewChange = onViewChange;
@@ -93,6 +94,7 @@ export class BoardRenderer {
     this.listeners = [];
     this.maxLineWidth = gl.getParameter(gl.ALIASED_LINE_WIDTH_RANGE)[1];
     canvas.style.touchAction = 'none';
+    canvas.style.cursor = 'grab';
     this.bindEvents();
     this.resizeObserver = new ResizeObserver(() => this.requestRender());
     this.resizeObserver.observe(canvas);
@@ -119,7 +121,7 @@ export class BoardRenderer {
     this.listen(canvas, 'pointermove', (event) => {
       const previous = this.pointers.get(event.pointerId);
       if (!previous) {
-        this.setHover(this.pick(event.clientX, event.clientY));
+        if (this.interactiveCells) this.setHover(this.pick(event.clientX, event.clientY));
         return;
       }
       const current = { x: event.clientX, y: event.clientY };
@@ -151,7 +153,7 @@ export class BoardRenderer {
       const isClick = event.type === 'pointerup' && !this.dragged && !this.panGesture && this.pointers.size === 1;
       this.pointers.delete(event.pointerId);
       if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-      if (isClick) this.onSelect(this.pick(event.clientX, event.clientY));
+      if (this.interactiveCells && isClick) this.onSelect(this.pick(event.clientX, event.clientY));
       // A remaining finger may orbit, but releasing a pinch must never select a cell.
       this.dragged = true;
     };
@@ -223,6 +225,7 @@ export class BoardRenderer {
   }
 
   setHover(coords) {
+    if (!this.interactiveCells) coords = null;
     if (sameCell(coords, this.hover)) return;
     this.hover = coords;
     this.canvas.style.cursor = coords ? 'pointer' : 'grab';
@@ -386,8 +389,10 @@ export class BoardRenderer {
     gl.vertexAttrib3f(this.colorAttribute, 0, 0, 0);
     gl.lineWidth(1);
     gl.drawArrays(gl.LINES, 0, this.edgeCount);
-    if (this.hover && !sameCell(this.hover, this.selection)) this.drawHighlight(this.hover, [0.31, 0.4, 0.53]);
-    if (this.selection) this.drawHighlight(this.selection, [0.94, 0.55, 0.12]);
+    if (this.interactiveCells) {
+      if (this.hover && !sameCell(this.hover, this.selection)) this.drawHighlight(this.hover, [0.31, 0.4, 0.53]);
+      if (this.selection) this.drawHighlight(this.selection, [0.94, 0.55, 0.12]);
+    }
   }
 
   drawHighlight(coords, color) {
