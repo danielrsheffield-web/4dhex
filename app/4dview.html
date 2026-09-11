@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>4D Permutohedron Tessellation Slicer with Boundary Toggles</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#101217; --panel:#181c24; --text:#e9eef7; --muted:#aeb8c8;
+    --line:#303846; --btn:#252c38; --btnActive:#355a9b; --btnPurple:#5d3a7d;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  #app{display:grid;grid-template-rows:auto 1fr;height:100%}
+  #controls{
+    display:grid;grid-template-columns:auto auto auto auto auto auto auto 1fr auto;
+    gap:10px 14px;align-items:start;padding:10px 14px;background:var(--panel);
+    border-bottom:1px solid var(--line);box-shadow:0 2px 12px #0007;z-index:2
+  }
+  label{font-size:13px;color:var(--muted);white-space:nowrap}
+  input[type=number]{width:68px;background:#0e1117;color:var(--text);border:1px solid var(--line);
+    border-radius:6px;padding:5px 7px}
+  input[type=range]{width:100%}
+  button{
+    background:var(--btn);color:var(--text);border:1px solid #3a4557;border-radius:7px;
+    padding:6px 10px;cursor:pointer
+  }
+  button:hover{background:#2c3544}
+  button.toggle.active{background:var(--btnActive); border-color:#6692df}
+  button.toggle.purple.active{background:var(--btnPurple); border-color:#9d7cc3}
+  #canvasWrap{position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  canvas.dragging{cursor:grabbing}
+  #hud{
+    position:absolute;left:12px;bottom:12px;padding:8px 10px;border-radius:7px;
+    background:#0c0f15c9;border:1px solid #31394a;color:#dbe4f2;font-size:12px;
+    line-height:1.45;pointer-events:none;backdrop-filter:blur(4px)
+  }
+  .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .blue{background:#377dff}.red{background:#ff4f5e}.yellow{background:#ffd84d}
+  .purple{background:#6b3fa0}
+  .transparent{background:transparent;border:1px solid #d7e0ee}
+  .timeBlock{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:8px;
+    align-items:start;
+    min-width:300px;
+  }
+  .sliderStack{
+    position:relative;
+    min-width:260px;
+    padding-bottom:20px;
+  }
+  #timeSlider{display:block;margin:0;width:100%}
+  #snapMarks{
+    position:absolute;left:0;right:0;top:24px;height:16px;
+    pointer-events:none;
+  }
+  .tick{
+    position:absolute;transform:translateX(-50%);
+    font-size:11px;color:#cdd7e8;text-align:center;white-space:nowrap;
+  }
+  .tick::before{
+    content:"";display:block;width:1px;height:7px;margin:0 auto 2px auto;
+    background:#8fa4cb;
+  }
+  @media (max-width:1250px){
+    #controls{grid-template-columns:auto auto auto auto auto 1fr auto;gap:8px 10px}
+    .timeBlock{grid-column:1/-1}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="controls">
+    <button id="blueBoundaryBtn" class="toggle">Show blue boundary</button>
+    <button id="redBoundaryBtn" class="toggle">Show red boundary</button>
+    <button id="purpleBoundaryBtn" class="toggle purple">Show red-and-blue boundary</button>
+    <button id="resetViewBtn">Reset view</button>
+
+    <div class="timeBlock">
+      <label for="timeSlider">slice t</label>
+      <div class="sliderStack">
+        <input id="timeSlider" type="range" min="1" max="3" step="0.001" value="1">
+        <div id="snapMarks"></div>
+      </div>
+      <span id="timeReadout" style="min-width:112px;text-align:right;color:var(--text)">t = 1.000</span>
+    </div>
+
+  </div>
+
+  <div id="canvasWrap">
+    <canvas id="view"></canvas>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const canvas = document.getElementById("view");
+const ctx = canvas.getContext("2d");
+const timeSlider = document.getElementById("timeSlider");
+const timeReadout = document.getElementById("timeReadout");
+const snapMarks = document.getElementById("snapMarks");
+const resetViewBtn = document.getElementById("resetViewBtn");
+const blueBoundaryBtn = document.getElementById("blueBoundaryBtn");
+const redBoundaryBtn = document.getElementById("redBoundaryBtn");
+const purpleBoundaryBtn = document.getElementById("purpleBoundaryBtn");
+let cells = JSON.parse(localStorage.getItem("renderCells") || "[]");
+
+const EPS = 1e-8;
+function dot(a,b){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+function sub(a,b){ return a.map((x,i)=>x-b[i]); }
+function mul(a,s){ return a.map(x=>x*s); }
+function norm(a){ return Math.sqrt(dot(a,a)); }
+function normalize(a){ const n=norm(a)||1; return mul(a,1/n); }
+function cross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function mean3(points){
+  const c=[0,0,0];
+  if(points.length===0) return c;
+  for(const p of points){ c[0]+=p[0]; c[1]+=p[1]; c[2]+=p[2]; }
+  c[0]/=points.length; c[1]/=points.length; c[2]/=points.length;
+  return c;
+}
+function edgeKey3(a,b){
+  const qa = a.map(x=>Math.round(x*1e7)).join(",");
+  const qb = b.map(x=>Math.round(x*1e7)).join(",");
+  return qa < qb ? qa + "|" + qb : qb + "|" + qa;
+}
+
+const V5 = [];
+for(let i=0;i<4;i++){
+  const v = [-1,-1,-1,-1,-1];
+  v[i]=4;
+  V5.push(v);
+}
+const Q = [];
+for(const vin of V5){
+  let w = vin.slice();
+  for(const q of Q) w = sub(w, mul(q, dot(w,q)));
+  Q.push(normalize(w));
+}
+const B = V5.map(v => Q.map(q => dot(v,q)));
+const BT = B[3][3];
+const TSLICE_HALF_WIDTH = 1/5;
+
+function mapH5to4(x){ return Q.map(q => dot(x,q)); }
+
+function permutations(arr){
+  const out=[];
+  function rec(a,l){
+    if(l===a.length){ out.push(a.slice()); return; }
+    for(let i=l;i<a.length;i++){
+      [a[l],a[i]]=[a[i],a[l]];
+      rec(a,l+1);
+      [a[l],a[i]]=[a[i],a[l]];
+    }
+  }
+  rec(arr.slice(),0);
+  return out;
+}
+
+const perms5 = permutations([-2,-1,0,1,2]);
+const verts4 = perms5.map(mapH5to4);
+
+const facetMasks = [];
+for(let mask=1; mask<31; mask++){
+  const k = [0,1,2,3,4].reduce((s,i)=>s+((mask>>i)&1),0);
+  const rhs = k*(5-k)/2;
+  facetMasks.push({mask,k,rhs});
+}
+function onFacet(v5, F){
+  let s=0;
+  for(let i=0;i<5;i++) if((F.mask>>i)&1) s+=v5[i];
+  return Math.abs(s-F.rhs)<1e-7;
+}
+const vertFacet = perms5.map(v => facetMasks.map(F => onFacet(v,F)));
+
+const edgeSet = new Set(), edges=[];
+const vIndex = new Map(perms5.map((p,i)=>[p.join(","),i]));
+for(let i=0;i<perms5.length;i++){
+  const p=perms5[i];
+  for(let val=-2; val<2; val++){
+    const a=p.indexOf(val), b=p.indexOf(val+1);
+    const q=p.slice(); [q[a],q[b]]=[q[b],q[a]];
+    const j=vIndex.get(q.join(","));
+    const lo=Math.min(i,j), hi=Math.max(i,j), key=lo+"-"+hi;
+    if(!edgeSet.has(key)){
+      edgeSet.add(key);
+      const common=[];
+      for(let f=0;f<facetMasks.length;f++) if(vertFacet[lo][f] && vertFacet[hi][f]) common.push(f);
+      edges.push({i:lo,j:hi,facets:common});
+    }
+  }
+}
+
+let baseTauMin=Infinity, baseTauMax=-Infinity;
+for(const p of verts4){
+  baseTauMin=Math.min(baseTauMin,p[3]);
+  baseTauMax=Math.max(baseTauMax,p[3]);
+}
+
+function key3(p){ return p.map(x=>Math.round(x*1e7)).join(","); }
+function unique3(points){
+  const m=new Map();
+  for(const p of points) m.set(key3(p),p);
+  return [...m.values()];
+}
+function orderPolygon(points){
+  points=unique3(points);
+  if(points.length<3) return points;
+  const c=mean3(points);
+  let u=null,n=null;
+  for(let i=0;i<points.length && !n;i++){
+    const a=sub(points[i],c);
+    if(norm(a)<EPS) continue;
+    for(let j=i+1;j<points.length;j++){
+      const b=sub(points[j],c);
+      const cr=cross(a,b);
+      if(norm(cr)>1e-7){ u=normalize(a); n=normalize(cr); break; }
+    }
+  }
+  if(!n) return points;
+  const v=normalize(cross(n,u));
+  return points.slice().sort((p1,p2)=>{
+    const a=sub(p1,c), b=sub(p2,c);
+    return Math.atan2(dot(a,v),dot(a,u))-Math.atan2(dot(b,v),dot(b,u));
+  });
+}
+
+function slicePermutohedron(deltaTau){
+  if(deltaTau < baseTauMin-1e-7 || deltaTau > baseTauMax+1e-7)
+    return {faces:[], centroid:[0,0,0]};
+
+  const facetPoints = Array.from({length:facetMasks.length},()=>[]);
+  const all=[];
+  for(const e of edges){
+    const A=verts4[e.i], Bp=verts4[e.j];
+    const ta=A[3], tb=Bp[3];
+    const pts=[];
+    if(Math.abs(ta-tb)<1e-10){
+      if(Math.abs(deltaTau-ta)<1e-7){
+        pts.push(A.slice(0,3), Bp.slice(0,3));
+      }
+    }else{
+      const u=(deltaTau-ta)/(tb-ta);
+      if(u>-1e-8 && u<1+1e-8){
+        pts.push([
+          A[0]+u*(Bp[0]-A[0]),
+          A[1]+u*(Bp[1]-A[1]),
+          A[2]+u*(Bp[2]-A[2])
+        ]);
+      }
+    }
+    for(const p of pts){
+      all.push(p);
+      for(const f of e.facets) facetPoints[f].push(p);
+    }
+  }
+
+  const uniq = unique3(all);
+  const centroid = mean3(uniq);
+  const faces=[];
+  for(let f=0; f<facetPoints.length; f++){
+    const poly=orderPolygon(facetPoints[f]);
+    if(poly.length>=3){
+      const clean=[];
+      for(let i=0;i<poly.length;i++){
+        const prev=poly[(i+poly.length-1)%poly.length];
+        const cur=poly[i];
+        const next=poly[(i+1)%poly.length];
+        if(norm(cross(sub(cur,prev),sub(next,cur)))>1e-7) clean.push(cur);
+      }
+      if(clean.length>=3) faces.push(clean);
+    }
+  }
+  return {faces, centroid};
+}
+
+let N = cells.length;
+let tNormMin=1, tNormMax=3, currentTNorm=1;
+let yaw=-0.72, pitch=0.54, zoom=1;
+let dragging=false, lastX=0,lastY=0;
+let sliderDragging=false, snapRAF=null;
+let globalCenter=[0,0,0];
+let showBlueBoundary=false;
+let showRedBoundary=false;
+let showPurpleBoundary=false;
+
+function hash4(a,b,c,d,s){
+  let x=(s ^ Math.imul(a,0x9e3779b1) ^ Math.imul(b,0x85ebca6b) ^
+         Math.imul(c,0xc2b2ae35) ^ Math.imul(d,0x27d4eb2f))>>>0;
+  x ^= x>>>16; x=Math.imul(x,0x7feb352d)>>>0;
+  x ^= x>>>15; x=Math.imul(x,0x846ca68b)>>>0;
+  x ^= x>>>16;
+  return x>>>0;
+}
+
+function isBoundaryIndex(v){ return v === 0 || v === N+1; }
+
+function isBlueBoundaryCell(a1,a2,a3,a4){
+  return showBlueBoundary &&
+    (a2 >= 1 && a2 <= N) &&
+    (a3 >= 1 && a3 <= N) &&
+    (a1 >= 0 && a1 <= N+1) &&
+    (a4 >= 0 && a4 <= N+1) &&
+    (isBoundaryIndex(a1) || isBoundaryIndex(a4));
+}
+
+function isRedBoundaryCell(a1,a2,a3,a4){
+  return showRedBoundary &&
+    (a1 >= 1 && a1 <= N) &&
+    (a4 >= 1 && a4 <= N) &&
+    (a2 >= 0 && a2 <= N+1) &&
+    (a3 >= 0 && a3 <= N+1) &&
+    (isBoundaryIndex(a2) || isBoundaryIndex(a3));
+}
+
+// Remaining outer-boundary cells in [0,N+1]^4 \ [1,N]^4 that are not in the
+// blue boundary or red boundary. Equivalently: at least one of a1,a4 is on
+// the boundary AND at least one of a2,a3 is on the boundary.
+function isPurpleBoundaryCell(a1,a2,a3,a4){
+  if(!showPurpleBoundary) return false;
+  if(!(a1 >= 0 && a1 <= N+1 && a2 >= 0 && a2 <= N+1 && a3 >= 0 && a3 <= N+1 && a4 >= 0 && a4 <= N+1)) return false;
+  if(isBlueBoundaryCell(a1,a2,a3,a4) || isRedBoundaryCell(a1,a2,a3,a4)) return false;
+  const out14 = isBoundaryIndex(a1) || isBoundaryIndex(a4);
+  const out23 = isBoundaryIndex(a2) || isBoundaryIndex(a3);
+  return out14 && out23;
+}
+
+function isInteriorCell(a1,a2,a3,a4){
+  return (a1 >= 1 && a1 <= N) &&
+         (a2 >= 1 && a2 <= N) &&
+         (a3 >= 1 && a3 <= N) &&
+         (a4 >= 1 && a4 <= N);
+}
+
+function cellExists(a1,a2,a3,a4){
+  return isInteriorCell(a1,a2,a3,a4) || isBlueBoundaryCell(a1,a2,a3,a4) || isRedBoundaryCell(a1,a2,a3,a4) || isPurpleBoundaryCell(a1,a2,a3,a4);
+}
+
+function colorIndex(a1,a2,a3,a4){
+  if(isBlueBoundaryCell(a1,a2,a3,a4)) return 0;
+  if(isRedBoundaryCell(a1,a2,a3,a4)) return 1;
+  if(isPurpleBoundaryCell(a1,a2,a3,a4)) return 4;
+  
+  return cells[a1 - 1][a2 - 1][a3 - 1][a4 - 1];
+}
+
+const palettes = [
+  {name:"blue",   rgb:[55,125,255]},
+  {name:"red",    rgb:[255,79,94]},
+  {name:"yellow", rgb:[255,216,77]},
+  {name:"transparent", rgb:[225,234,246]},
+  {name:"purple", rgb:[107,63,160]}
+];
+
+function center4(a1,a2,a3,a4){
+  const aa=[a1,a2,a3,a4], c=[0,0,0,0];
+  for(let i=0;i<4;i++) for(let k=0;k<4;k++) c[k]+=aa[i]*B[i][k];
+  return c;
+}
+function recomputeGlobalCenter(){
+  const c=center4((N+1)/2,(N+1)/2,(N+1)/2,(N+1)/2);
+  globalCenter=c.slice(0,3);
+}
+function updateTickMarks(){
+  snapMarks.innerHTML="";
+  const span=tNormMax-tNormMin || 1;
+  for(let k=tNormMin;k<=tNormMax;k++){
+    const tick=document.createElement("div");
+    tick.className="tick";
+    tick.style.left=(100*(k-tNormMin)/span)+"%";
+    tick.textContent=String(k);
+    snapMarks.appendChild(tick);
+  }
+}
+function setSliderToNorm(v){
+  currentTNorm=Math.max(tNormMin, Math.min(tNormMax, v));
+  timeSlider.value=currentTNorm;
+}
+function cancelSnap(){
+  if(snapRAF!==null){ cancelAnimationFrame(snapRAF); snapRAF=null; }
+}
+function startSnap(){
+  cancelSnap();
+  const target=Math.max(tNormMin, Math.min(tNormMax, Math.round(currentTNorm)));
+  function step(){
+    const diff=target-currentTNorm;
+    if(Math.abs(diff)<5e-4){
+      setSliderToNorm(target);
+      render();
+      snapRAF=null;
+      return;
+    }
+    setSliderToNorm(currentTNorm + diff*0.18);
+    render();
+    snapRAF=requestAnimationFrame(step);
+  }
+  snapRAF=requestAnimationFrame(step);
+}
+function updateButtonStates(){
+  blueBoundaryBtn.classList.toggle("active", showBlueBoundary);
+  blueBoundaryBtn.textContent = showBlueBoundary ? "Hide blue boundary" : "Show blue boundary";
+  redBoundaryBtn.classList.toggle("active", showRedBoundary);
+  redBoundaryBtn.textContent = showRedBoundary ? "Hide red boundary" : "Show red boundary";
+  purpleBoundaryBtn.classList.toggle("active", showPurpleBoundary);
+  purpleBoundaryBtn.textContent = showPurpleBoundary ? "Hide red-and-blue boundary" : "Show red-and-blue boundary";
+}
+function needsWideTimeRange(){
+  return showBlueBoundary || showPurpleBoundary;
+}
+function updateTimeRange(keepValue=true){
+  const old = currentTNorm;
+  tNormMin = needsWideTimeRange() ? 0 : 1;
+  tNormMax = needsWideTimeRange() ? (N+1) : N;
+  timeSlider.min=tNormMin;
+  timeSlider.max=tNormMax;
+  timeSlider.step=Math.max(0.001, (tNormMax-tNormMin)/2000);
+  if(keepValue){
+    setSliderToNorm(old);
+  }else{
+    setSliderToNorm(Math.round((tNormMin+tNormMax)/2));
+  }
+  updateTickMarks();
+}
+
+function rebuild(){
+  cells = JSON.parse(localStorage.getItem("renderCells") || "[]");
+  N = cells.length;
+  recomputeGlobalCenter();
+  updateTimeRange(false);
+  zoom=1;
+  updateButtonStates();
+  render();
+}
+
+function rotatePoint(p){
+  const cy=Math.cos(yaw), sy=Math.sin(yaw);
+  const cp=Math.cos(pitch), sp=Math.sin(pitch);
+  const x1=cy*p[0]-sy*p[1];
+  const y1=sy*p[0]+cy*p[1];
+  const z1=p[2];
+  return [x1, cp*y1-sp*z1, sp*y1+cp*z1];
+}
+function fitScale(){
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.width/dpr, h=canvas.height/dpr;
+  const extra = (showBlueBoundary || showRedBoundary || showPurpleBoundary) ? 10 : 6;
+  const span=Math.max(12, 6.3*N + extra);
+  return Math.min(w,h)/span*zoom;
+}
+function shadeRGB(rgb,brightness,alpha){
+  const b=Math.max(.35,Math.min(1.15,brightness));
+  return `rgba(${Math.round(rgb[0]*b)},${Math.round(rgb[1]*b)},${Math.round(rgb[2]*b)},${alpha})`;
+}
+
+function render(){
+  const rect=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  const W=Math.max(1,Math.round(rect.width*dpr)), H=Math.max(1,Math.round(rect.height*dpr));
+  if(canvas.width!==W || canvas.height!==H){ canvas.width=W; canvas.height=H; }
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const w=W/dpr,h=H/dpr;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#101217"; ctx.fillRect(0,0,w,h);
+
+  currentTNorm=+timeSlider.value;
+  const tau = BT * currentTNorm;
+  timeReadout.textContent="t = "+currentTNorm.toFixed(3);
+
+  const active=[];
+  const a4min = needsWideTimeRange() ? 0 : 1;
+  const a4max = needsWideTimeRange() ? N+1 : N;
+  for(let a4=a4min;a4<=a4max;a4++){
+    const deltaTau=tau-BT*a4;
+    if(deltaTau>=baseTauMin-1e-7 && deltaTau<=baseTauMax+1e-7){
+      active.push({a4,deltaTau,shape:slicePermutohedron(deltaTau)});
+    }
+  }
+
+  const scale=fitScale(), ox=w/2, oy=h/2;
+  const primitives=[];
+
+  function worldToRot(p,shift){
+    return rotatePoint([
+      p[0]+shift[0]-globalCenter[0],
+      p[1]+shift[1]-globalCenter[1],
+      p[2]+shift[2]-globalCenter[2]
+    ]);
+  }
+  function screen(r){ return [ox+scale*r[0], oy-scale*r[1]]; }
+
+  let visibleCells=0, filledCells=0, edgeOnlyCells=0;
+  let counts=[0,0,0,0,0];
+
+  const a1min = needsWideTimeRange() ? 0 : 1;
+  const a1max = needsWideTimeRange() ? N+1 : N;
+  const a23min = (showRedBoundary || showPurpleBoundary) ? 0 : 1;
+  const a23max = (showRedBoundary || showPurpleBoundary) ? N+1 : N;
+
+  for(const layer of active){
+    const a4=layer.a4, shape=layer.shape;
+    for(let a1=a1min;a1<=a1max;a1++) for(let a2=a23min;a2<=a23max;a2++) for(let a3=a23min;a3<=a23max;a3++){
+      if(!cellExists(a1,a2,a3,a4)) continue;
+
+      const c=center4(a1,a2,a3,a4), shift=c.slice(0,3);
+      const ci=colorIndex(a1,a2,a3,a4);
+      const pal=palettes[ci];
+      visibleCells++;
+      counts[ci]++;
+      if(ci===3) edgeOnlyCells++; else filledCells++;
+
+      const polyCenterRot = worldToRot(shape.centroid, shift);
+      const transparentEdgeMap = new Map();
+
+      for(const face of shape.faces){
+        let rr=face.map(p=>worldToRot(p,shift));
+        if(rr.length < 3) continue;
+
+        let n = cross(sub(rr[1],rr[0]), sub(rr[2],rr[0]));
+        const fc = mean3(rr);
+        if(dot(n, sub(fc, polyCenterRot)) < 0){
+          rr = rr.slice().reverse();
+          n = mul(n, -1);
+        }
+
+        if(ci===3){
+          for(let i=0;i<rr.length;i++){
+            const A = rr[i], B = rr[(i+1)%rr.length];
+            const key = edgeKey3(A,B);
+            if(!transparentEdgeMap.has(key)) transparentEdgeMap.set(key, {a:A, b:B});
+          }
+        } else if(n[2] > 1e-7){
+          const light=normalize([-.35,.5,1]);
+          const br=.58+.42*Math.abs(dot(normalize(n),light));
+          primitives.push({
+            type:"face",
+            z: rr.reduce((s,p)=>s+p[2],0)/rr.length,
+            pts: rr.map(screen),
+            fill: shadeRGB(pal.rgb, br, 1.0)
+          });
+        }
+      }
+
+      if(ci===3){
+        for(const seg of transparentEdgeMap.values()){
+          primitives.push({
+            type:"edge",
+            z: 0.5*(seg.a[2] + seg.b[2]),
+            a: screen(seg.a),
+            b: screen(seg.b)
+          });
+        }
+      }
+    }
+  }
+
+  primitives.sort((a,b)=>a.z-b.z);
+  ctx.lineJoin="round";
+  ctx.lineCap="round";
+
+  for(const prim of primitives){
+    if(prim.type === "face"){
+      ctx.beginPath();
+      ctx.moveTo(prim.pts[0][0], prim.pts[0][1]);
+      for(let i=1;i<prim.pts.length;i++) ctx.lineTo(prim.pts[i][0], prim.pts[i][1]);
+      ctx.closePath();
+      ctx.fillStyle = prim.fill;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(prim.a[0], prim.a[1]);
+      ctx.lineTo(prim.b[0], prim.b[1]);
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = "rgba(225,234,246,0.98)";
+      ctx.stroke();
+    }
+  }
+
+  const axisOrigin=[52,h-54], axisLen=28;
+  const axes=[
+    {v:rotatePoint([1,0,0]),label:"x"},
+    {v:rotatePoint([0,1,0]),label:"y"},
+    {v:rotatePoint([0,0,1]),label:"z"}
+  ];
+  ctx.font="11px system-ui"; ctx.fillStyle="#cad5e6"; ctx.strokeStyle="#cad5e6"; ctx.lineWidth=1.3;
+  for(const a of axes){
+    const ex=axisOrigin[0]+axisLen*a.v[0], ey=axisOrigin[1]-axisLen*a.v[1];
+    ctx.beginPath(); ctx.moveTo(axisOrigin[0],axisOrigin[1]); ctx.lineTo(ex,ey); ctx.stroke();
+    ctx.fillText(a.label,ex+3,ey-2);
+  }
+
+  const totalInterior = N**4;
+  const shellCount = ((N+2)*(N+2) - N*N) * N*N;          // blue-only shell count, same for red shell
+  const purpleCount = showPurpleBoundary ? (((N+2)*(N+2) - N*N) ** 2) : 0; // corner/edge product shell
+  const totalBlueBoundary = showBlueBoundary ? shellCount : 0;
+  const totalRedBoundary = showRedBoundary ? shellCount : 0;
+  const totalPurpleBoundary = purpleCount;
+  const totalCells = totalInterior + totalBlueBoundary + totalRedBoundary + totalPurpleBoundary;
+
+  const layerText=active.length ? active.map(x=>x.a4).join(", ") : "none";
+  const nearest = Math.max(tNormMin, Math.min(tNormMax, Math.round(currentTNorm)));
+  const offset = Math.abs(currentTNorm - nearest);
+  const inTO = (offset < TSLICE_HALF_WIDTH - 1e-6);
+}
+
+timeSlider.addEventListener("input",()=>{ cancelSnap(); currentTNorm=+timeSlider.value; render(); });
+timeSlider.addEventListener("pointerdown",()=>{ sliderDragging=true; cancelSnap(); });
+document.addEventListener("pointerup",()=>{ if(sliderDragging){ sliderDragging=false; startSnap(); }});
+timeSlider.addEventListener("change",()=>{ if(!sliderDragging) startSnap(); });
+
+resetViewBtn.addEventListener("click",()=>{ yaw=-0.72; pitch=0.54; zoom=1; render(); });
+setInterval(()=>{
+  if (localStorage.getItem("needUpdate") === "true"){
+    localStorage.setItem("needUpdate", "false");
+    rebuild();
+  }
+}, 1000);
+
+blueBoundaryBtn.addEventListener("click", ()=>{
+  showBlueBoundary = !showBlueBoundary;
+  cancelSnap();
+  updateTimeRange(true);
+  updateButtonStates();
+  render();
+});
+redBoundaryBtn.addEventListener("click", ()=>{
+  showRedBoundary = !showRedBoundary;
+  cancelSnap();
+  updateButtonStates();
+  render();
+});
+purpleBoundaryBtn.addEventListener("click", ()=>{
+  showPurpleBoundary = !showPurpleBoundary;
+  cancelSnap();
+  updateTimeRange(true);
+  updateButtonStates();
+  render();
+});
+
+canvas.addEventListener("pointerdown",e=>{
+  dragging=true; lastX=e.clientX; lastY=e.clientY; canvas.classList.add("dragging");
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointermove",e=>{
+  if(!dragging) return;
+  const dx=e.clientX-lastX, dy=e.clientY-lastY;
+  lastX=e.clientX; lastY=e.clientY;
+  yaw += dx*0.008;
+  pitch += dy*0.008;
+  pitch=Math.max(-1.52,Math.min(1.52,pitch));
+  render();
+});
+canvas.addEventListener("pointerup",()=>{ dragging=false; canvas.classList.remove("dragging"); });
+canvas.addEventListener("pointercancel",()=>{ dragging=false; canvas.classList.remove("dragging"); });
+canvas.addEventListener("wheel",e=>{
+  e.preventDefault();
+  zoom *= Math.exp(-e.deltaY*0.001);
+  zoom=Math.max(.18,Math.min(8,zoom));
+  render();
+},{passive:false});
+window.addEventListener("resize",render);
+
+rebuild();
+</script>
+</body>
+</html>

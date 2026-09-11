@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8">
+  <title>Voronoi series model tests</title>
+  <style>
+    body { font: 14px/1.6 monospace; margin: 32px; }
+    .pass { color: #076132; }
+    .fail { color: #b02020; }
+  </style>
+  <h1>Voronoi series model tests</h1>
+  <pre id="results">Running…</pre>
+  <script type="module">
+    import { defineSeriesModelTests } from './voronoi-series-model-suite.mjs';
+
+    const results = [];
+    const fail = (message) => { throw new Error(message); };
+    const assert = {
+      ok(value, message = 'Expected a truthy value') {
+        if (!value) fail(message);
+      },
+      equal(actual, expected, message = '') {
+        if (!Object.is(actual, expected)) fail(`${message} Expected ${expected}; got ${actual}`);
+      },
+      deepEqual(actual, expected, message = '') {
+        if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+          fail(`${message} Expected ${JSON.stringify(expected)}; got ${JSON.stringify(actual)}`);
+        }
+      },
+      throws(callback, pattern) {
+        try { callback(); } catch (error) {
+          if (pattern && !pattern.test(error.message)) fail(`Unexpected error: ${error.message}`);
+          return;
+        }
+        fail('Expected the callback to throw');
+      },
+    };
+    defineSeriesModelTests((name, callback) => {
+      try {
+        callback();
+        results.push({ name, passed: true });
+      } catch (error) {
+        results.push({ name, passed: false, error: error.stack });
+      }
+    }, assert);
+    const passed = results.filter((result) => result.passed).length;
+    const output = document.querySelector('#results');
+    output.className = passed === results.length ? 'pass' : 'fail';
+    output.textContent = results.map((result) =>
+      `${result.passed ? 'PASS' : 'FAIL'} ${result.name}${result.error ? `\n${result.error}` : ''}`,
+    ).join('\n') + `\n\n${passed}/${results.length} tests passed.`;
+    window.testResults = { passed, total: results.length, results };
+  </script>
+</html>

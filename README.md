@@ -86,6 +86,52 @@ are also reported in the console. If browser storage is unavailable or a write
 fails, board edits remain available in memory for the current page; they may
 not survive a reload.
 
+## Synchronized board series
+
+Open **http://127.0.0.1:8000/voronoi/series/** for a display-only version that
+shows one 3D board for each entry in `localStorage["hex.voronoi.series"]`.
+The stored value is a JSON-encoded array of 3D arrays:
+
+```js
+// Three boards, each with its own 3D array.
+const makeBoard = () => Array.from({ length: 3 }, () =>
+  Array.from({ length: 3 }, () => Array(2).fill(0))
+);
+const boards = [makeBoard(), makeBoard(), makeBoard()];
+boards[0][0][0][0] = 1;  // Blue cell (1, 1, 1) in the first board.
+boards[1][0][0][0] = -1; // Red cell (1, 1, 1) in the second board.
+boards[2][1][1][1] = 1;  // Blue cell (2, 2, 2) in the third board.
+
+localStorage.setItem("hex.voronoi.series", JSON.stringify(boards));
+// If the series page is already open in this tab:
+window.voronoiSeries.reload();
+```
+
+The outer array length determines the number of representations. Boards appear
+left to right, then top to bottom, in a grid that adapts to the window. Dragging
+rotates all boards together around their own centers; zoom and pan are shared
+too. The series uses one WebGL context, including when displaying more than
+16 boards.
+
+Each inner board uses the same M × M × depth format and color values described
+above, with dimensions from 1 to 12. Different boards may have different
+dimensions. The outer array may be empty, which gives an empty display. When
+no series is saved, the viewer initializes three transparent 3 × 3 × 3 boards.
+The single-board storage key is unaffected.
+
+On the series page, you can also update storage and the display together:
+
+```js
+window.voronoiSeries.setBoards(boards);
+const copy = window.voronoiSeries.getBoards();
+window.voronoiSeries.resetView();
+```
+
+The camera orientation survives data updates. Storage updates from other tabs
+refresh automatically. Invalid data leaves the last valid series displayed and
+is reported in the browser console without overwriting storage. Failed saves
+keep the current series in memory.
+
 ## Geometry tests
 
 With Node.js 22 or newer:
@@ -98,3 +144,9 @@ Alternatively, serve the repository root with `python3 -m http.server 8080`
 and open `http://localhost:8080/tests/voronoi-model.test.html` in a browser.
 Both runners use the same seven tests, covering topology, face orientation,
 volume, shared neighbor faces, lattice coordinates, resizing, and validation.
+
+The series model has seven additional tests for outer-array validation, mixed
+board sizes, empty series, ordering, and independent copies. Run
+`node --experimental-default-type=module --test tests/voronoi-series-model.test.mjs`
+or open `http://localhost:8080/tests/voronoi-series-model.test.html` with the
+same repository server.

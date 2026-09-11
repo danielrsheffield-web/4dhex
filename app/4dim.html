@@ -251,6 +251,7 @@ body {
             botMove();
           }
         }
+
     });
 
     async function checkPlayer() {
@@ -469,6 +470,36 @@ body {
         if (botResponse && data.victory === 0) {
             botMove();
         }
+        
+        writeRenderCells();
+      }
+
+      function writeRenderCells(){
+        renderCells = storedCells;
+        for (let i = 0; i < storedCells.length; i++) {
+          for (let j = 0; j < storedCells[i].length; j++) {
+            for (let k = 0; k < storedCells[i][j].length; k++) {
+              for (let l = 0; l < storedCells[i][j][k].length; l++) {
+                if (storedCells[i][j][k][l] === 0){
+                  renderCells[i][j][k][l] = 3;
+                }
+                else if (storedCells[i][j][k][l] === 1){
+                  renderCells[i][j][k][l] = 0;
+                }
+                else if (storedCells[i][j][k][l] === -1){
+                  renderCells[i][j][k][l] = 1;
+                }
+              }
+            }
+          }
+        }
+        markedCoords.forEach(coord => {
+          if (renderCells[coord[0]][coord[1]][coord[2]][coord[3]] === 3){
+            renderCells[coord[0]][coord[1]][coord[2]][coord[3]] = 2;
+          }
+        });
+        localStorage.setItem("renderCells", JSON.stringify(renderCells));
+        localStorage.setItem("needUpdate", "true");
       }
 
       async function mark(coords){
@@ -487,6 +518,7 @@ body {
             }
             const data = await response.json();
             render4dHexGrid(data.board);
+            writeRenderCells();
             return;
           }
         }
@@ -503,6 +535,7 @@ body {
             }
             const data = await response.json();
             render4dHexGrid(data.board);
+            writeRenderCells();
             return;
           }
 
@@ -609,6 +642,7 @@ body {
         if (new URLSearchParams(window.location.search).get("isHost") === "true"){
           alert("To have another player join, have them click Join Game and enter this code: " + gameId);
         }
+        writeRenderCells();
       }
 
       function adjInit(coords) {
@@ -684,20 +718,6 @@ async function changeAxis(i, m){
     localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
 
     localStorage.setItem("coordOrder", JSON.stringify(coordOrder));
-    const response = await fetch("/getBoard4d", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder }),
-    });
-    if (!response.ok) {
-      document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
-      return;
-    }
-    const data = await response.json();
-    render4dHexGrid(data.board);
-}
-
-async function recoverGame(){
     const response = await fetch("/getBoard4d", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -789,6 +809,7 @@ async function newOrder(choice){
     localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
 
     render4dHexGrid(data.board);
+    writeRenderCells();
 }
 
 function victory(player){

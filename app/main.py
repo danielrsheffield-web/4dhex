@@ -31,6 +31,10 @@ def playGame():
 def tutorial():
     return FileResponse("app/tutorial.html")
 
+@app.get("/4dview", response_class = HTMLResponse)
+def fourdview():
+    return FileResponse("app/4dview.html")
+
 class CoordRequest(BaseModel):
     coords: list
     user_id: str

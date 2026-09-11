@@ -332,10 +332,10 @@ export class BoardRenderer {
     }
   }
 
-  matrix() {
+  matrix({ target = this.target, radius = this.radius, halfHeight = this.halfHeight, aspect = this.aspect } = {}) {
     const { direction, right, up } = this.basis();
-    const distance = this.radius * 12 + 100;
-    const eye = this.target.map((value, i) => value + direction[i] * distance);
+    const distance = radius * 12 + 100;
+    const eye = target.map((value, i) => value + direction[i] * distance);
     const view = new Float32Array([
       right[0], up[0], direction[0], 0,
       right[1], up[1], direction[1], 0,
@@ -345,8 +345,8 @@ export class BoardRenderer {
     const near = 0.01;
     const far = distance * 2;
     const projection = new Float32Array([
-      1 / (this.halfHeight * this.aspect), 0, 0, 0,
-      0, 1 / this.halfHeight, 0, 0,
+      1 / (halfHeight * aspect), 0, 0, 0,
+      0, 1 / halfHeight, 0, 0,
       0, 0, -2 / (far - near), 0,
       0, 0, -(far + near) / (far - near), 1,
     ]);
@@ -372,15 +372,25 @@ export class BoardRenderer {
     gl.disable(gl.CULL_FACE);
     gl.useProgram(this.program);
     gl.uniformMatrix4fv(this.matrixUniform, false, this.matrix());
+    this.drawBuffers();
+    if (this.interactiveCells) {
+      if (this.hover && !sameCell(this.hover, this.selection)) this.drawHighlight(this.hover, [0.31, 0.4, 0.53]);
+      if (this.selection) this.drawHighlight(this.selection, [0.94, 0.55, 0.12]);
+    }
+  }
+
+  /** Draw an optional range of the shared geometry buffers. */
+  drawBuffers({ faceStart = 0, faceCount = this.faceCount, edgeStart = 0, edgeCount = this.edgeCount } = {}) {
+    const gl = this.gl;
     gl.enableVertexAttribArray(this.positionAttribute);
-    if (this.faceCount) {
+    if (faceCount) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.faceBuffer);
       gl.vertexAttribPointer(this.positionAttribute, 3, gl.FLOAT, false, 24, 0);
       gl.enableVertexAttribArray(this.colorAttribute);
       gl.vertexAttribPointer(this.colorAttribute, 3, gl.FLOAT, false, 24, 12);
       gl.enable(gl.POLYGON_OFFSET_FILL);
       gl.polygonOffset(1, 1);
-      gl.drawArrays(gl.TRIANGLES, 0, this.faceCount);
+      gl.drawArrays(gl.TRIANGLES, faceStart, faceCount);
       gl.disable(gl.POLYGON_OFFSET_FILL);
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeBuffer);
@@ -388,11 +398,7 @@ export class BoardRenderer {
     gl.disableVertexAttribArray(this.colorAttribute);
     gl.vertexAttrib3f(this.colorAttribute, 0, 0, 0);
     gl.lineWidth(1);
-    gl.drawArrays(gl.LINES, 0, this.edgeCount);
-    if (this.interactiveCells) {
-      if (this.hover && !sameCell(this.hover, this.selection)) this.drawHighlight(this.hover, [0.31, 0.4, 0.53]);
-      if (this.selection) this.drawHighlight(this.selection, [0.94, 0.55, 0.12]);
-    }
+    gl.drawArrays(gl.LINES, edgeStart, edgeCount);
   }
 
   drawHighlight(coords, color) {
