@@ -410,9 +410,9 @@ function startSnap(){
 }
 function updateButtonStates(){
   blueBoundaryBtn.classList.toggle("active", showBlueBoundary);
-  blueBoundaryBtn.textContent = swap ? (showRedBoundary ? "Hide red boundary" : "Show red boundary") : (showBlueBoundary ? "Hide blue boundary" : "Show blue boundary");
+  blueBoundaryBtn.textContent = swap ? (showRedBoundary ? "Hide red boundary" : "Show red boundary") : (showRedBoundary ? "Hide blue boundary" : "Show blue boundary");
   redBoundaryBtn.classList.toggle("active", showRedBoundary);
-  redBoundaryBtn.textContent = swap ? (showBlueBoundary ? "Hide blue boundary" : "Show blue boundary") : (showRedBoundary ? "Hide red boundary" : "Show red boundary");
+  redBoundaryBtn.textContent = swap ? (showBlueBoundary ? "Hide blue boundary" : "Show blue boundary") : (showBlueBoundary ? "Hide red boundary" : "Show red boundary");
   purpleBoundaryBtn.classList.toggle("active", showPurpleBoundary);
   purpleBoundaryBtn.textContent = showPurpleBoundary ? "Hide red-and-blue boundary" : "Show red-and-blue boundary";
 }

@@ -474,9 +474,10 @@ body {
       }
 
       function writeRenderCells(){
-        let renderCells = Array.from({ length: 3 }, () =>
-          Array.from({ length: 3 }, () =>
-            Array.from({ length: 3 }, () => Array(3).fill(0))
+        const size = storedCells.length;
+        let renderCells = Array.from({ length: size }, () =>
+          Array.from({ length: size }, () =>
+            Array.from({ length: size }, () => Array(size).fill(0))
           )
         );
         let renderOrder = [0,0,0,0];
