@@ -70,7 +70,6 @@ body {
       let player = Number(new URLSearchParams(window.location.search).get("player"));
       let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
       let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
-      let marking = JSON.parse(localStorage.getItem("marking") || "false");
       let botResponse = Boolean(new URLSearchParams(window.location.search).get("botResponse")) || false;
       let gameOver = false;
       let curPlayer = 0;
@@ -475,27 +474,48 @@ body {
       }
 
       function writeRenderCells(){
-        renderCells = storedCells;
+        let renderCells = Array.from({ length: 3 }, () =>
+          Array.from({ length: 3 }, () =>
+            Array.from({ length: 3 }, () => Array(3).fill(0))
+          )
+        );
+        let renderOrder = [0,0,0,0];
+        renderOrder[3] = coordOrder[0];
+        if (coordOrder[0] === 0 || coordOrder[0] === 2){
+          localStorage.setItem("swap", JSON.stringify(false));
+          renderOrder[0] = 2 - renderOrder[3];
+          renderOrder[1] = 1;
+          renderOrder[2] = 3;
+        }
+        else {
+          localStorage.setItem("swap", JSON.stringify(true));
+          renderOrder[0] = 4 - renderOrder[3];
+          renderOrder[1] = 0;
+          renderOrder[2] = 2;
+        }
         for (let i = 0; i < storedCells.length; i++) {
           for (let j = 0; j < storedCells[i].length; j++) {
             for (let k = 0; k < storedCells[i][j].length; k++) {
               for (let l = 0; l < storedCells[i][j][k].length; l++) {
-                if (storedCells[i][j][k][l] === 0){
-                  renderCells[i][j][k][l] = 3;
+                let subCoords = [i,j,k,l];
+                copyCell = storedCells[subCoords[coordOrder[0]]][subCoords[coordOrder[1]]][subCoords[coordOrder[2]]][subCoords[coordOrder[3]]];
+                if (copyCell === 0){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 3;
                 }
-                else if (storedCells[i][j][k][l] === 1){
-                  renderCells[i][j][k][l] = 0;
+                else if (copyCell === 1){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 0;
                 }
-                else if (storedCells[i][j][k][l] === -1){
-                  renderCells[i][j][k][l] = 1;
+                else if (copyCell === -1){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 1;
                 }
               }
             }
           }
         }
         markedCoords.forEach(coord => {
-          if (renderCells[coord[0]][coord[1]][coord[2]][coord[3]] === 3){
-            renderCells[coord[0]][coord[1]][coord[2]][coord[3]] = 2;
+          let objectiveCoords = [coord[coordOrder[0]],coord[coordOrder[1]],coord[coordOrder[2]],coord[coordOrder[3]]];
+          if (renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] === 3){
+            renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] = 2;
           }
         });
         localStorage.setItem("renderCells", JSON.stringify(renderCells));
@@ -731,17 +751,6 @@ async function changeAxis(i, m){
     render4dHexGrid(data.board);
 }
 
-function toggleMarking() {
-  marking = !marking;
-  localStorage.setItem("marking", marking);
-  if (marking) {
-    document.getElementById("marking").innerHTML = "Marking";
-  }
-  else {
-    document.getElementById("marking").innerHTML = "";
-  }
-}
-
 async function clearMarking() {
   markedCoords = [];
   localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
@@ -891,6 +900,10 @@ function writeCoords(coords, x, y, ctx){
 function returnToMenu () {
   window.location.href = "/";
 }
+
+function fourdView() {
+  window.open("/4dview", "_blank");
+}
     </script>
   </head>
   <body>
@@ -898,7 +911,7 @@ function returnToMenu () {
 <aside class="sidebar" id="sidebar">
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
     <div id="GameInfo"><span id="gameId"></span></div>
-
+      <button onclick="fourdView()">Open 4d View</button>
       <button onclick="clearMarking()">Clear Marking</button>
       <br>
       <button onclick="showEdges(1)">Show Blue Edges</button> 

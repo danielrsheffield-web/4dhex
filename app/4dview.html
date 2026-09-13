@@ -110,6 +110,7 @@ const blueBoundaryBtn = document.getElementById("blueBoundaryBtn");
 const redBoundaryBtn = document.getElementById("redBoundaryBtn");
 const purpleBoundaryBtn = document.getElementById("purpleBoundaryBtn");
 let cells = JSON.parse(localStorage.getItem("renderCells") || "[]");
+let swap = JSON.parse(localStorage.getItem("renderSwap") || "false");
 
 const EPS = 1e-8;
 function dot(a,b){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
@@ -343,8 +344,13 @@ function cellExists(a1,a2,a3,a4){
 }
 
 function colorIndex(a1,a2,a3,a4){
-  if(isBlueBoundaryCell(a1,a2,a3,a4)) return 0;
-  if(isRedBoundaryCell(a1,a2,a3,a4)) return 1;
+  if(swap) {
+    if(isBlueBoundaryCell(a1,a2,a3,a4)) return 1;
+    if(isRedBoundaryCell(a1,a2,a3,a4)) return 0;}
+  else{
+    if(isBlueBoundaryCell(a1,a2,a3,a4)) return 0;
+    if(isRedBoundaryCell(a1,a2,a3,a4)) return 1;}
+
   if(isPurpleBoundaryCell(a1,a2,a3,a4)) return 4;
   
   return cells[a1 - 1][a2 - 1][a3 - 1][a4 - 1];
@@ -404,9 +410,9 @@ function startSnap(){
 }
 function updateButtonStates(){
   blueBoundaryBtn.classList.toggle("active", showBlueBoundary);
-  blueBoundaryBtn.textContent = showBlueBoundary ? "Hide blue boundary" : "Show blue boundary";
+  blueBoundaryBtn.textContent = swap ? (showRedBoundary ? "Hide red boundary" : "Show red boundary") : (showBlueBoundary ? "Hide blue boundary" : "Show blue boundary");
   redBoundaryBtn.classList.toggle("active", showRedBoundary);
-  redBoundaryBtn.textContent = showRedBoundary ? "Hide red boundary" : "Show red boundary";
+  redBoundaryBtn.textContent = swap ? (showBlueBoundary ? "Hide blue boundary" : "Show blue boundary") : (showRedBoundary ? "Hide red boundary" : "Show red boundary");
   purpleBoundaryBtn.classList.toggle("active", showPurpleBoundary);
   purpleBoundaryBtn.textContent = showPurpleBoundary ? "Hide red-and-blue boundary" : "Show red-and-blue boundary";
 }
@@ -430,6 +436,7 @@ function updateTimeRange(keepValue=true){
 
 function rebuild(){
   cells = JSON.parse(localStorage.getItem("renderCells") || "[]");
+  swap = JSON.parse(localStorage.getItem("swap") || "false");
   N = cells.length;
   recomputeGlobalCenter();
   updateTimeRange(false);
