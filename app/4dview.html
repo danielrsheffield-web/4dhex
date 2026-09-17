@@ -33,11 +33,35 @@
   #canvasWrap{position:relative;min-height:0}
   canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
   canvas.dragging{cursor:grabbing}
+  #coordPanel{
+    position:absolute;right:12px;bottom:12px;width:280px;max-width:calc(100% - 24px);
+    padding:12px 14px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;box-shadow:0 2px 12px #0007;
+  }
+  #coordPanel h2{margin:0 0 12px;font-size:14px;font-weight:600}
+  .coordRow{display:grid;grid-template-columns:auto minmax(0,1fr) 2ch;gap:10px;align-items:start}
+  .coordRow + .coordRow{margin-top:10px}
+  .coordSlider{display:block;margin:0;accent-color:#6692df}
+  .coordMarks{position:relative;height:24px;margin:3px 8px 0;pointer-events:none}
+  .coordReadout{font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
   #hud{
     position:absolute;left:12px;bottom:12px;padding:8px 10px;border-radius:7px;
     background:#0c0f15c9;border:1px solid #31394a;color:#dbe4f2;font-size:12px;
     line-height:1.45;pointer-events:none;backdrop-filter:blur(4px)
   }
+  #TurnDisplay {
+    width: 200px;
+    height: 30px;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border: 2px solid #222;
+    color: #000
+    background-color: #0f72e2;
+
+}
   .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   .blue{background:#377dff}.red{background:#ff4f5e}.yellow{background:#ffd84d}
   .purple{background:#6b3fa0}
@@ -89,11 +113,40 @@
       </div>
       <span id="timeReadout" style="min-width:112px;text-align:right;color:var(--text)">t = 1.000</span>
     </div>
+    <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
 
   </div>
 
   <div id="canvasWrap">
     <canvas id="view"></canvas>
+    <section id="coordPanel" aria-labelledby="coordPanelTitle">
+      <h2 id="coordPanelTitle">Coordinates</h2>
+      <div class="coordRow">
+        <label for="coordSlider1">a1</label>
+        <div>
+          <input id="coordSlider1" class="coordSlider" type="range" min="1" max="1" step="1" value="1">
+          <div class="coordMarks" aria-hidden="true"></div>
+        </div>
+        <output class="coordReadout" for="coordSlider1">1</output>
+      </div>
+      <div class="coordRow">
+        <label for="coordSlider2">a2</label>
+        <div>
+          <input id="coordSlider2" class="coordSlider" type="range" min="1" max="1" step="1" value="1">
+          <div class="coordMarks" aria-hidden="true"></div>
+        </div>
+        <output class="coordReadout" for="coordSlider2">1</output>
+      </div>
+      <div class="coordRow">
+        <label for="coordSlider3">a3</label>
+        <div>
+          <input id="coordSlider3" class="coordSlider" type="range" min="1" max="1" step="1" value="1">
+          <div class="coordMarks" aria-hidden="true"></div>
+        </div>
+        <output class="coordReadout" for="coordSlider3">1</output>
+      </div>
+      <button id="playBtn">Play</button>
+    </section>
   </div>
 </div>
 
@@ -109,8 +162,23 @@ const resetViewBtn = document.getElementById("resetViewBtn");
 const blueBoundaryBtn = document.getElementById("blueBoundaryBtn");
 const redBoundaryBtn = document.getElementById("redBoundaryBtn");
 const purpleBoundaryBtn = document.getElementById("purpleBoundaryBtn");
+const coordSliders = [...document.querySelectorAll(".coordSlider")];
+const coordReadouts = [...document.querySelectorAll(".coordReadout")];
+const coordMarks = [...document.querySelectorAll(".coordMarks")];
+const sliderCoords = [1,1,1];
 let cells = JSON.parse(localStorage.getItem("renderCells") || "[]");
-let swap = JSON.parse(localStorage.getItem("renderSwap") || "false");
+let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
+let curPlayer = JSON.parse(localStorage.getItem("curPlayer") || "0");
+let gameId = new URLSearchParams(window.location.search).get("game_id");
+let player = Number(new URLSearchParams(window.location.search).get("player"));
+let botResponse 
+if (((new URLSearchParams(window.location.search).get("botResponse")) || "false") === "true"){
+    botResponse = true;
+} else {
+    botResponse = false;
+}
+let gameOver = false;
+let checking = false;
 
 const EPS = 1e-8;
 function dot(a,b){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
@@ -344,7 +412,7 @@ function cellExists(a1,a2,a3,a4){
 }
 
 function colorIndex(a1,a2,a3,a4){
-  if(swap) {
+  if(timeCoord === 0 || timeCoord === 2) {
     if(isBlueBoundaryCell(a1,a2,a3,a4)) return 1;
     if(isRedBoundaryCell(a1,a2,a3,a4)) return 0;}
   else{
@@ -352,6 +420,12 @@ function colorIndex(a1,a2,a3,a4){
     if(isRedBoundaryCell(a1,a2,a3,a4)) return 1;}
 
   if(isPurpleBoundaryCell(a1,a2,a3,a4)) return 4;
+
+  let cellColor = cells[a1 - 1][a2 - 1][a3 - 1][a4 - 1];
+
+  if (cellColor === 0 || cellColor === 1) return cellColor;
+
+  if (a1 === sliderCoords[0] && a2 === sliderCoords[1] && a3 === sliderCoords[2]) return 5;
   
   return cells[a1 - 1][a2 - 1][a3 - 1][a4 - 1];
 }
@@ -361,7 +435,8 @@ const palettes = [
   {name:"red",    rgb:[255,79,94]},
   {name:"yellow", rgb:[255,216,77]},
   {name:"transparent", rgb:[225,234,246]},
-  {name:"purple", rgb:[107,63,160]}
+  {name:"purple", rgb:[107,63,160]},
+  {name:"green", rgb:[51,204,51]}
 ];
 
 function center4(a1,a2,a3,a4){
@@ -410,9 +485,9 @@ function startSnap(){
 }
 function updateButtonStates(){
   blueBoundaryBtn.classList.toggle("active", showBlueBoundary);
-  blueBoundaryBtn.textContent = swap ? (showRedBoundary ? "Hide red boundary" : "Show red boundary") : (showRedBoundary ? "Hide blue boundary" : "Show blue boundary");
+  blueBoundaryBtn.textContent = timeCoord === 0 || timeCoord === 2 ? (showBlueBoundary ? "Hide red boundary" : "Show red boundary") : (showBlueBoundary ? "Hide blue boundary" : "Show blue boundary");
   redBoundaryBtn.classList.toggle("active", showRedBoundary);
-  redBoundaryBtn.textContent = swap ? (showBlueBoundary ? "Hide blue boundary" : "Show blue boundary") : (showBlueBoundary ? "Hide red boundary" : "Show red boundary");
+  redBoundaryBtn.textContent = timeCoord === 0 || timeCoord === 2 ? (showRedBoundary ? "Hide blue boundary" : "Show blue boundary") : (showRedBoundary ? "Hide red boundary" : "Show red boundary");
   purpleBoundaryBtn.classList.toggle("active", showPurpleBoundary);
   purpleBoundaryBtn.textContent = showPurpleBoundary ? "Hide red-and-blue boundary" : "Show red-and-blue boundary";
 }
@@ -434,16 +509,176 @@ function updateTimeRange(keepValue=true){
   updateTickMarks();
 }
 
+function setCoordSlider(index,value){
+  sliderCoords[index]=Math.max(1,Math.min(Math.max(1,N),Math.round(value)));
+  coordSliders[index].value=sliderCoords[index];
+  coordReadouts[index].value=sliderCoords[index];
+}
+function updateCoordSliders(){
+  const max=Math.max(1,N);
+  coordSliders.forEach((slider,index)=>{
+    slider.max=max;
+    slider.disabled=N<1;
+    setCoordSlider(index,sliderCoords[index]);
+    coordMarks[index].replaceChildren();
+    for(let k=1;k<=max;k++){
+      const tick=document.createElement("div");
+      tick.className="tick";
+      tick.style.left=(max===1 ? 50 : 100*(k-1)/(max-1))+"%";
+      tick.textContent=String(k);
+      coordMarks[index].appendChild(tick);
+    }
+  });
+}
+
+async function play() {
+       if (curPlayer === -player){return;}
+        let storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
+        localStorage.setItem("triangles", JSON.stringify([]));
+        localStorage.setItem("edges", JSON.stringify([]));
+        let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
+        timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
+        let ogCoords = [0,0,0,0];
+
+        ogCoords[timeCoord] = 3 - Math.round(timeSlider.value);
+
+        if (timeCoord === 0 || timeCoord === 2){
+          ogCoords[2 - timeCoord] = 3 - sliderCoords[0];
+          ogCoords[1] = 3 - sliderCoords[1];
+          ogCoords[3] = 3 - sliderCoords[2];
+        }
+        else{
+          ogCoords[4 - timeCoord] = 3 - sliderCoords[0];
+          ogCoords[0] = 3 - sliderCoords[1];
+          ogCoords[2] = 3 - sliderCoords[2];
+        }
+
+        let coords = [0,0,0,0];
+
+        for (let i = 0; i < coords.length; i++) {
+          coords[coordOrder[i]] = ogCoords[i];
+        }
+
+        if (storedCells[coords[0]][coords[1]][coords[2]][coords[3]] !== 0){
+          return;
+        }
+        console.log(coords);
+
+        if (gameOver || !gameId) return;
+
+        const response = await fetch("/play4d", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ coords: coords, user_id: gameId, coordOrder: JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]"), botResponse: botResponse }),
+        });
+
+        if (!response.ok) {
+          //document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+          return;
+        }
+
+        const data = await response.json();
+        if (data.player === 1){
+          curPlayer = 1;
+          localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
+          document.getElementById("player").innerHTML = "Blue";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+          //if (player === 0){
+            //document.getElementById("sidebar").style.backgroundColor = "#0f72e2";
+          //}
+        }
+        else{
+          curPlayer = -1;
+          localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
+          document.getElementById("player").innerHTML = "Red";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+          //if (player === 0){
+            //document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
+          //}
+        }
+
+        localStorage.setItem("storedCells", JSON.stringify(data.cells));
+        writeRenderCells();
+
+        rebuild();
+
+        if (data.victory !== 0) {
+            gameOver = true;
+            victory(data.victory);
+        }
+        if (botResponse && data.victory === 0) {
+            botMove();
+        }
+      }
+
 function rebuild(){
   cells = JSON.parse(localStorage.getItem("renderCells") || "[]");
-  swap = JSON.parse(localStorage.getItem("swap") || "false");
+  timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
   N = cells.length;
+  updateCoordSliders();
   recomputeGlobalCenter();
-  updateTimeRange(false);
+  updateTimeRange(true);
   zoom=1;
   updateButtonStates();
   render();
 }
+
+function botMove(){
+    return;
+}
+
+
+function writeRenderCells(){
+        const inputCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
+        const size = inputCells.length;
+        let renderCells = Array.from({ length: size }, () =>
+          Array.from({ length: size }, () =>
+            Array.from({ length: size }, () => Array(size).fill(0))
+          )
+        );
+        const coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
+        let renderOrder = [0,0,0,0];
+        renderOrder[3] = coordOrder[0];
+        if (coordOrder[0] === 0 || coordOrder[0] === 2){
+          renderOrder[0] = 2 - renderOrder[3];
+          renderOrder[1] = 1;
+          renderOrder[2] = 3;
+        }
+        else {
+          renderOrder[0] = 4 - renderOrder[3];
+          renderOrder[1] = 0;
+          renderOrder[2] = 2;
+        }
+        const lastIndex = inputCells.length - 1;
+        for (let i = 0; i < inputCells.length; i++) {
+          for (let j = 0; j < inputCells[i].length; j++) {
+            for (let k = 0; k < inputCells[i][j].length; k++) {
+              for (let l = 0; l < inputCells[i][j][k].length; l++) {
+                let subCoords = [i,j,k,l];
+                let copyCell = inputCells[lastIndex - subCoords[coordOrder[0]]][lastIndex - subCoords[coordOrder[1]]][lastIndex - subCoords[coordOrder[2]]][lastIndex - subCoords[coordOrder[3]]];
+                if (copyCell === 0){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 3;
+                }
+                else if (copyCell === 1){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 0;
+                }
+                else if (copyCell === -1){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 1;
+                }
+              }
+            }
+          }
+        }
+        let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
+        markedCoords.forEach(coord => {
+          let objectiveCoords = [lastIndex - coord[coordOrder[0]],lastIndex - coord[coordOrder[1]],lastIndex - coord[coordOrder[2]],lastIndex - coord[coordOrder[3]]];
+          if (renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] === 3){
+            renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] = 2;
+          }
+        });
+        localStorage.setItem("renderCells", JSON.stringify(renderCells));
+        localStorage.setItem("needUpdate", "true");
+      }
 
 function rotatePoint(p){
   const cy=Math.cos(yaw), sy=Math.sin(yaw);
@@ -614,12 +849,20 @@ function render(){
   const inTO = (offset < TSLICE_HALF_WIDTH - 1e-6);
 }
 
+coordSliders.forEach((slider,index)=>{
+  slider.addEventListener("input",()=>{
+    setCoordSlider(index,slider.valueAsNumber);
+    render();
+  });
+});
+
 timeSlider.addEventListener("input",()=>{ cancelSnap(); currentTNorm=+timeSlider.value; render(); });
 timeSlider.addEventListener("pointerdown",()=>{ sliderDragging=true; cancelSnap(); });
 document.addEventListener("pointerup",()=>{ if(sliderDragging){ sliderDragging=false; startSnap(); }});
 timeSlider.addEventListener("change",()=>{ if(!sliderDragging) startSnap(); });
 
 resetViewBtn.addEventListener("click",()=>{ yaw=-0.72; pitch=0.54; zoom=1; render(); });
+playBtn.addEventListener("click",()=>{ play(); });
 setInterval(()=>{
   if (localStorage.getItem("needUpdate") === "true"){
     localStorage.setItem("needUpdate", "false");
@@ -670,6 +913,91 @@ canvas.addEventListener("wheel",e=>{
   render();
 },{passive:false});
 window.addEventListener("resize",render);
+
+curPlayer = JSON.parse(localStorage.getItem("curPlayer") || "0");
+if (curPlayer === 1){
+          document.getElementById("player").innerHTML = "Blue";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+          //if (player === 0){
+            //document.getElementById("sidebar").style.backgroundColor = "#0f72e2";
+          //}
+        }
+        else{
+          document.getElementById("player").innerHTML = "Red";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+          //if (player === 0){
+            //document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
+          //}
+        }
+
+    async function checkPlayer() {
+      if (checking) {return;}
+      checking = true;
+      if (curPlayer !== JSON.parse(localStorage.getItem("curPlayer") || "0")) {
+        curPlayer = JSON.parse(localStorage.getItem("curPlayer") || "0");
+        if (curPlayer === 1) {
+          document.getElementById("player").innerHTML = "Blue";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+          //if (player === 0){
+            //document.getElementById("sidebar").style.backgroundColor = "#0f72e2";
+          //}
+        }
+        else {
+          document.getElementById("player").innerHTML = "Red";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+          //if (player === 0){
+            //  document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
+          //}
+        }
+        checking = false;
+        return;
+      }
+      if (player === curPlayer || player === 0) {checking = false; return;}
+      const response = await fetch("/getPlayer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: gameId }),
+      });
+      if (!response.ok) {
+        document.getElementById("error").innerHTML = "Server error: " + response.status;
+        checking = false;
+        return;
+      }
+      const data = await response.json();
+      if (curPlayer === data.player) {checking = false; return;}
+
+      curPlayer = data.player;
+      localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
+      if (curPlayer === 1) {
+        document.getElementById("player").innerHTML = "Blue";
+        document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+      }
+      else {
+        document.getElementById("player").innerHTML = "Red";
+        document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+      }
+      const response2 = await fetch("/getBoard4d", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder }),
+      });
+      if (!response.ok) {
+        document.getElementById("error").innerHTML = "Server error: " + response.status;
+        return;
+      }
+      const data2 = await response2.json();
+      
+      writeRenderCells(data2.board);
+      render();
+
+      if (data2.victory !== 0) {
+        gameOver = true;
+        victory(data2.victory);
+      }
+      checking = false;
+    }
+
+    setInterval(checkPlayer, 1000);
 
 rebuild();
 </script>

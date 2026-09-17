@@ -72,7 +72,7 @@ body {
       let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
       let botResponse = Boolean(new URLSearchParams(window.location.search).get("botResponse")) || false;
       let gameOver = false;
-      let curPlayer = 0;
+      let curPlayer = JSON.parse(localStorage.getItem("curPlayer") || "0");
       let boardSize = Number(new URLSearchParams(window.location.search).get("size"));
       let hexSize = 50;
       let centerX = 0;
@@ -242,9 +242,7 @@ body {
         document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
         document.getElementById("myCanvas").addEventListener("contextmenu", handleContextMenu);
-        if (player !== 0 && !botResponse) {
-            setInterval(checkPlayer, 1000);
-        }
+        setInterval(checkPlayer, 1000);
         if (botResponse) {
           if (player === -1) {
             botMove();
@@ -256,6 +254,25 @@ body {
     async function checkPlayer() {
       if (checking) {return;}
       checking = true;
+      if (curPlayer !== JSON.parse(localStorage.getItem("curPlayer") || "0")) {
+        curPlayer = JSON.parse(localStorage.getItem("curPlayer") || "0");
+        if (curPlayer === 1) {
+          document.getElementById("player").innerHTML = "Blue";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+          if (player === 0){
+            document.getElementById("sidebar").style.backgroundColor = "#0f72e2";
+          }
+        }
+        else {
+          document.getElementById("player").innerHTML = "Red";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+          if (player === 0){
+            document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
+          }
+        }
+        checking = false;
+        return;
+      }
       if (player === curPlayer || player === 0) {checking = false; return;}
       const response = await fetch("/getPlayer", {
         method: "POST",
@@ -271,6 +288,7 @@ body {
       if (curPlayer === data.player) {checking = false; return;}
 
       curPlayer = data.player;
+      localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
       if (curPlayer === 1) {
         document.getElementById("player").innerHTML = "Blue";
         document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
@@ -447,6 +465,7 @@ body {
         render4dHexGrid(data.cells);
         if (data.player === 1){
           curPlayer = 1;
+          localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
           document.getElementById("player").innerHTML = "Blue";
           document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
           if (player === 0){
@@ -455,6 +474,7 @@ body {
         }
         else{
           curPlayer = -1;
+          localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
           document.getElementById("player").innerHTML = "Red";
           document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
           if (player === 0){
@@ -482,24 +502,24 @@ body {
         );
         let renderOrder = [0,0,0,0];
         renderOrder[3] = coordOrder[0];
+        localStorage.setItem("timeCoord", coordOrder[0]);
         if (coordOrder[0] === 0 || coordOrder[0] === 2){
-          localStorage.setItem("swap", JSON.stringify(false));
           renderOrder[0] = 2 - renderOrder[3];
           renderOrder[1] = 1;
           renderOrder[2] = 3;
         }
         else {
-          localStorage.setItem("swap", JSON.stringify(true));
           renderOrder[0] = 4 - renderOrder[3];
           renderOrder[1] = 0;
           renderOrder[2] = 2;
         }
+        const lastIndex = storedCells.length - 1;
         for (let i = 0; i < storedCells.length; i++) {
           for (let j = 0; j < storedCells[i].length; j++) {
             for (let k = 0; k < storedCells[i][j].length; k++) {
               for (let l = 0; l < storedCells[i][j][k].length; l++) {
                 let subCoords = [i,j,k,l];
-                copyCell = storedCells[subCoords[coordOrder[0]]][subCoords[coordOrder[1]]][subCoords[coordOrder[2]]][subCoords[coordOrder[3]]];
+                copyCell = storedCells[lastIndex - subCoords[coordOrder[0]]][lastIndex - subCoords[coordOrder[1]]][lastIndex - subCoords[coordOrder[2]]][lastIndex - subCoords[coordOrder[3]]];
                 if (copyCell === 0){
                   renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 3;
                 }
@@ -514,7 +534,7 @@ body {
           }
         }
         markedCoords.forEach(coord => {
-          let objectiveCoords = [coord[coordOrder[0]],coord[coordOrder[1]],coord[coordOrder[2]],coord[coordOrder[3]]];
+          let objectiveCoords = [lastIndex - coord[coordOrder[0]],lastIndex - coord[coordOrder[1]],lastIndex - coord[coordOrder[2]],lastIndex - coord[coordOrder[3]]];
           if (renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] === 3){
             renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] = 2;
           }
@@ -854,6 +874,7 @@ async function botMove() {
   render4dHexGrid(data.cells);
   if (data.player === 1){
           curPlayer = 1;
+          localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
           document.getElementById("player").innerHTML = "Blue";
           document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
           if (player === 0){
@@ -862,6 +883,7 @@ async function botMove() {
         }
         else{
           curPlayer = -1;
+          localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
           document.getElementById("player").innerHTML = "Red";
           document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
           if (player === 0){
@@ -903,7 +925,7 @@ function returnToMenu () {
 }
 
 function fourdView() {
-  window.open("/4dview", "_blank");
+  window.open("/4dview" + "?game_id=" + gameId + "&player=" + player + "&botResponse=" + botResponse, "_blank");
 }
     </script>
   </head>
