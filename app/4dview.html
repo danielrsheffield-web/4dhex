@@ -976,6 +976,7 @@ if (curPlayer === 1){
         document.getElementById("player").innerHTML = "Red";
         document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
       }
+      let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
       const response2 = await fetch("/getBoard4d", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

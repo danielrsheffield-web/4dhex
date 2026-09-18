@@ -79,6 +79,7 @@ body {
       let centerY = 0;
       let checking = false;
       let manCoords = false;
+      let playing = false;
     
     function render2dHexGrid(cells, baseX, baseY, ctx, axes, coords = []) {
 
@@ -448,7 +449,8 @@ body {
           return;
         }
 
-        if (gameOver || !gameId) return;
+        if (gameOver || !gameId || playing) return;
+        playing = true;
 
         const response = await fetch("/play4d", {
           method: "POST",
@@ -491,6 +493,7 @@ body {
         }
         
         writeRenderCells();
+        playing = false;
       }
 
       function writeRenderCells(){
