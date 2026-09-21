@@ -309,6 +309,7 @@ body {
       }
       const data2 = await response2.json();
       render4dHexGrid(data2.board);
+      writeRenderCells();
       if (data2.victory !== 0) {
         gameOver = true;
         victory(data2.victory);
