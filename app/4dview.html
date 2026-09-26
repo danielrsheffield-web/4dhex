@@ -31,6 +31,13 @@
   button.toggle.active{background:var(--btnActive); border-color:#6692df}
   button.toggle.purple.active{background:var(--btnPurple); border-color:#9d7cc3}
   #canvasWrap{position:relative;min-height:0}
+  #victoryBanner{
+    position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:1;
+    width:calc(100% - 32px);max-width:560px;padding:16px 24px;
+    border-radius:8px;box-shadow:0 2px 12px #0007;color:#fff;
+    font-size:clamp(24px,4vw,40px);font-weight:700;text-align:center;
+    pointer-events:none;
+  }
   canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
   canvas.dragging{cursor:grabbing}
   #coordPanel{
@@ -100,8 +107,8 @@
 <body>
 <div id="app">
   <div id="controls">
-    <button id="blueBoundaryBtn" class="toggle">Show blue boundary</button>
-    <button id="redBoundaryBtn" class="toggle">Show red boundary</button>
+    <button id="the14BoundaryBtn" class="toggle">Show blue boundary</button>
+    <button id="the23BoundaryBtn" class="toggle">Show red boundary</button>
     <button id="purpleBoundaryBtn" class="toggle purple">Show red-and-blue boundary</button>
     <button id="resetViewBtn">Reset view</button>
 
@@ -114,11 +121,19 @@
       <span id="timeReadout" style="min-width:112px;text-align:right;color:var(--text)">t = 1.000</span>
     </div>
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
-
+    <div class="bannerButtons">
+        <button id="uBtn" type="button">U</button>
+        <button id="vBtn" type="button">V</button>
+        <button id="xBtn" type="button">X</button>
+        <button id="yBtn" type="button">Y</button>
+      </div>
+    
+    
   </div>
 
   <div id="canvasWrap">
     <canvas id="view"></canvas>
+    <div id="victoryBanner" role="status" aria-atomic="true" hidden></div>
     <section id="coordPanel" aria-labelledby="coordPanelTitle">
       <h2 id="coordPanelTitle">Coordinates</h2>
       <div class="coordRow">
@@ -146,6 +161,7 @@
         <output class="coordReadout" for="coordSlider3">1</output>
       </div>
       <button id="playBtn">Play</button>
+      <button id="markBtn">Mark</button>
     </section>
   </div>
 </div>
@@ -159,8 +175,8 @@ const timeSlider = document.getElementById("timeSlider");
 const timeReadout = document.getElementById("timeReadout");
 const snapMarks = document.getElementById("snapMarks");
 const resetViewBtn = document.getElementById("resetViewBtn");
-const blueBoundaryBtn = document.getElementById("blueBoundaryBtn");
-const redBoundaryBtn = document.getElementById("redBoundaryBtn");
+const the14BoundaryBtn = document.getElementById("the14BoundaryBtn");
+const the23BoundaryBtn = document.getElementById("the23BoundaryBtn");
 const purpleBoundaryBtn = document.getElementById("purpleBoundaryBtn");
 const coordSliders = [...document.querySelectorAll(".coordSlider")];
 const coordReadouts = [...document.querySelectorAll(".coordReadout")];
@@ -355,8 +371,8 @@ let yaw=-0.72, pitch=0.54, zoom=1;
 let dragging=false, lastX=0,lastY=0;
 let sliderDragging=false, snapRAF=null;
 let globalCenter=[0,0,0];
-let showBlueBoundary=false;
-let showRedBoundary=false;
+let show14Boundary=false;
+let show23Boundary=false;
 let showPurpleBoundary=false;
 
 function hash4(a,b,c,d,s){
@@ -370,8 +386,8 @@ function hash4(a,b,c,d,s){
 
 function isBoundaryIndex(v){ return v === 0 || v === N+1; }
 
-function isBlueBoundaryCell(a1,a2,a3,a4){
-  return showBlueBoundary &&
+function is14BoundaryCell(a1,a2,a3,a4){
+  return show14Boundary &&
     (a2 >= 1 && a2 <= N) &&
     (a3 >= 1 && a3 <= N) &&
     (a1 >= 0 && a1 <= N+1) &&
@@ -379,8 +395,8 @@ function isBlueBoundaryCell(a1,a2,a3,a4){
     (isBoundaryIndex(a1) || isBoundaryIndex(a4));
 }
 
-function isRedBoundaryCell(a1,a2,a3,a4){
-  return showRedBoundary &&
+function is23BoundaryCell(a1,a2,a3,a4){
+  return show23Boundary &&
     (a1 >= 1 && a1 <= N) &&
     (a4 >= 1 && a4 <= N) &&
     (a2 >= 0 && a2 <= N+1) &&
@@ -394,7 +410,7 @@ function isRedBoundaryCell(a1,a2,a3,a4){
 function isPurpleBoundaryCell(a1,a2,a3,a4){
   if(!showPurpleBoundary) return false;
   if(!(a1 >= 0 && a1 <= N+1 && a2 >= 0 && a2 <= N+1 && a3 >= 0 && a3 <= N+1 && a4 >= 0 && a4 <= N+1)) return false;
-  if(isBlueBoundaryCell(a1,a2,a3,a4) || isRedBoundaryCell(a1,a2,a3,a4)) return false;
+  if(is14BoundaryCell(a1,a2,a3,a4) || is23BoundaryCell(a1,a2,a3,a4)) return false;
   const out14 = isBoundaryIndex(a1) || isBoundaryIndex(a4);
   const out23 = isBoundaryIndex(a2) || isBoundaryIndex(a3);
   return out14 && out23;
@@ -408,16 +424,16 @@ function isInteriorCell(a1,a2,a3,a4){
 }
 
 function cellExists(a1,a2,a3,a4){
-  return isInteriorCell(a1,a2,a3,a4) || isBlueBoundaryCell(a1,a2,a3,a4) || isRedBoundaryCell(a1,a2,a3,a4) || isPurpleBoundaryCell(a1,a2,a3,a4);
+  return isInteriorCell(a1,a2,a3,a4) || is14BoundaryCell(a1,a2,a3,a4) || is23BoundaryCell(a1,a2,a3,a4) || isPurpleBoundaryCell(a1,a2,a3,a4);
 }
 
 function colorIndex(a1,a2,a3,a4){
   if(timeCoord === 0 || timeCoord === 2) {
-    if(isBlueBoundaryCell(a1,a2,a3,a4)) return 1;
-    if(isRedBoundaryCell(a1,a2,a3,a4)) return 0;}
+    if(is14BoundaryCell(a1,a2,a3,a4)) return 0;
+    if(is23BoundaryCell(a1,a2,a3,a4)) return 1;}
   else{
-    if(isBlueBoundaryCell(a1,a2,a3,a4)) return 0;
-    if(isRedBoundaryCell(a1,a2,a3,a4)) return 1;}
+    if(is14BoundaryCell(a1,a2,a3,a4)) return 1;
+    if(is23BoundaryCell(a1,a2,a3,a4)) return 0;}
 
   if(isPurpleBoundaryCell(a1,a2,a3,a4)) return 4;
 
@@ -429,6 +445,52 @@ function colorIndex(a1,a2,a3,a4){
   
   return cells[a1 - 1][a2 - 1][a3 - 1][a4 - 1];
 }
+
+uBtn.addEventListener("click", ()=>{
+ let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
+ if (timeCoord === 1 || timeCoord === 3) {
+  swapBoundaries();
+ }
+ localStorage.setItem("timeCoord", 0);
+ writeRenderCells();
+ render();
+});
+xBtn.addEventListener("click", ()=>{
+let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
+ if (timeCoord === 0 || timeCoord === 2) {
+  swapBoundaries();
+ }
+ localStorage.setItem("timeCoord", 1);
+ writeRenderCells();
+ render();
+});
+vBtn.addEventListener("click", ()=>{
+ let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
+ if (timeCoord === 1 || timeCoord === 3) {
+  swapBoundaries();
+ }
+ localStorage.setItem("timeCoord", 2);
+ writeRenderCells();
+ render();
+
+});
+yBtn.addEventListener("click", ()=>{
+ let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
+ if (timeCoord === 0 || timeCoord === 2) {
+  swapBoundaries();
+ }
+ localStorage.setItem("timeCoord", 3);
+ writeRenderCells();
+ render();
+});
+
+
+function swapBoundaries(){
+ let temp = show23Boundary;
+ show23Boundary = show14Boundary;
+ show14Boundary = temp;
+}
+
 
 const palettes = [
   {name:"blue",   rgb:[55,125,255]},
@@ -484,15 +546,16 @@ function startSnap(){
   snapRAF=requestAnimationFrame(step);
 }
 function updateButtonStates(){
-  blueBoundaryBtn.classList.toggle("active", showBlueBoundary);
-  blueBoundaryBtn.textContent = timeCoord === 0 || timeCoord === 2 ? (showBlueBoundary ? "Hide red boundary" : "Show red boundary") : (showBlueBoundary ? "Hide blue boundary" : "Show blue boundary");
-  redBoundaryBtn.classList.toggle("active", showRedBoundary);
-  redBoundaryBtn.textContent = timeCoord === 0 || timeCoord === 2 ? (showRedBoundary ? "Hide blue boundary" : "Show blue boundary") : (showRedBoundary ? "Hide red boundary" : "Show red boundary");
+  timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
+  the14BoundaryBtn.classList.toggle("active", show14Boundary);
+  the14BoundaryBtn.textContent = timeCoord === 1 || timeCoord === 3 ? (show14Boundary ? "Hide red boundary" : "Show red boundary") : (show14Boundary ? "Hide blue boundary" : "Show blue boundary");
+  the23BoundaryBtn.classList.toggle("active", show23Boundary);
+  the23BoundaryBtn.textContent = timeCoord === 1 || timeCoord === 3 ? (show23Boundary ? "Hide blue boundary" : "Show blue boundary") : (show23Boundary ? "Hide red boundary" : "Show red boundary");
   purpleBoundaryBtn.classList.toggle("active", showPurpleBoundary);
   purpleBoundaryBtn.textContent = showPurpleBoundary ? "Hide red-and-blue boundary" : "Show red-and-blue boundary";
 }
 function needsWideTimeRange(){
-  return showBlueBoundary || showPurpleBoundary;
+  return show14Boundary || showPurpleBoundary;
 }
 function updateTimeRange(keepValue=true){
   const old = currentTNorm;
@@ -531,7 +594,55 @@ function updateCoordSliders(){
   });
 }
 
-async function play() {
+async function mark(coords){
+    let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
+    let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
+        for (let i = 0; i < markedCoords.length; i++) {
+            if (markedCoords[i][0] === coords[0] && markedCoords[i][1] === coords[1] && markedCoords[i][2] === coords[2] && markedCoords[i][3] === coords[3]) {
+              markedCoords.splice(i, 1);
+              localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+              const response = await fetch("/getBoard4d", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
+              });
+            if (!response.ok) {
+            document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+            return;
+            }
+            const data = await response.json();
+            writeRenderCells();
+            render();
+            return;
+          }
+        }
+        markedCoords.push(coords);
+        localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+        const response = await fetch("/getBoard4d", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
+              });
+            if (!response.ok) {
+            document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+            return;
+            }
+            const data = await response.json();
+            writeRenderCells();
+            render();
+            return;
+          }
+
+function victory(winner){
+  if(winner !== 1 && winner !== -1) return;
+  const banner = document.getElementById("victoryBanner");
+  banner.textContent = winner === 1 ? "Blue Has Won" : "Red Has Won";
+  banner.style.backgroundColor = winner === 1 ? "#0f72e2" : "#d20d0d";
+  banner.hidden = false;
+  gameOver = true;
+}
+
+async function play(isMark = false) {
        if (curPlayer === -player){return;}
         let storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
         localStorage.setItem("triangles", JSON.stringify([]));
@@ -540,24 +651,30 @@ async function play() {
         timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
         let ogCoords = [0,0,0,0];
 
-        ogCoords[timeCoord] = 3 - Math.round(timeSlider.value);
+        ogCoords[timeCoord] = storedCells.length - Math.round(timeSlider.value);
 
         if (timeCoord === 0 || timeCoord === 2){
-          ogCoords[2 - timeCoord] = 3 - sliderCoords[0];
-          ogCoords[1] = 3 - sliderCoords[1];
-          ogCoords[3] = 3 - sliderCoords[2];
+          ogCoords[2 - timeCoord] = storedCells.length - sliderCoords[0];
+          ogCoords[1] = storedCells.length - sliderCoords[1];
+          ogCoords[3] = storedCells.length - sliderCoords[2];
         }
         else{
-          ogCoords[4 - timeCoord] = 3 - sliderCoords[0];
-          ogCoords[0] = 3 - sliderCoords[1];
-          ogCoords[2] = 3 - sliderCoords[2];
+          ogCoords[4 - timeCoord] = storedCells.length - sliderCoords[0];
+          ogCoords[0] = storedCells.length - sliderCoords[1];
+          ogCoords[2] = storedCells.length - sliderCoords[2];
         }
 
         let coords = [0,0,0,0];
 
         for (let i = 0; i < coords.length; i++) {
-          coords[coordOrder[i]] = ogCoords[i];
+          coords[i] = ogCoords[coordOrder[i]];
         }
+
+        if (isMark){
+          mark(coords);
+          return;
+        }
+
 
         if (storedCells[coords[0]][coords[1]][coords[2]][coords[3]] !== 0){
           return;
@@ -623,8 +740,39 @@ function rebuild(){
   render();
 }
 
-function botMove(){
+async function botMove() {
+  const response = await fetch("/botMove", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: gameId, coordOrder: JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]")}),
+  });
+  if (!response.ok) {
+    document.getElementById("error").innerHTML = "Server error: " + response.status;
     return;
+  }
+  const data = await response.json();
+        if (data.player === 1){
+          curPlayer = 1;
+          localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
+          document.getElementById("player").innerHTML = "Blue";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+        }
+        else{
+          curPlayer = -1;
+          localStorage.setItem("curPlayer", JSON.stringify(curPlayer));
+          document.getElementById("player").innerHTML = "Red";
+          document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+        }
+
+        localStorage.setItem("storedCells", JSON.stringify(data.cells));
+        writeRenderCells();
+
+        rebuild();
+
+        if (data.victory !== 0) {
+            gameOver = true;
+            victory(data.victory);
+        }
 }
 
 
@@ -638,8 +786,8 @@ function writeRenderCells(){
         );
         const coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
         let renderOrder = [0,0,0,0];
-        renderOrder[3] = coordOrder[0];
-        if (coordOrder[0] === 0 || coordOrder[0] === 2){
+        renderOrder[3] = JSON.parse(localStorage.getItem("timeCoord") || "0");
+        if (renderOrder[3] === 0 || renderOrder[3] === 2){
           renderOrder[0] = 2 - renderOrder[3];
           renderOrder[1] = 1;
           renderOrder[2] = 3;
@@ -671,7 +819,10 @@ function writeRenderCells(){
         }
         let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
         markedCoords.forEach(coord => {
-          let objectiveCoords = [lastIndex - coord[coordOrder[0]],lastIndex - coord[coordOrder[1]],lastIndex - coord[coordOrder[2]],lastIndex - coord[coordOrder[3]]];
+          let objectiveCoords = [0,0,0,0];
+          for (let i = 0; i < objectiveCoords.length; i++) {
+            objectiveCoords[coordOrder[i]] = lastIndex - coord[i];
+          }
           if (renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] === 3){
             renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] = 2;
           }
@@ -691,7 +842,7 @@ function rotatePoint(p){
 function fitScale(){
   const dpr=window.devicePixelRatio||1;
   const w=canvas.width/dpr, h=canvas.height/dpr;
-  const extra = (showBlueBoundary || showRedBoundary || showPurpleBoundary) ? 10 : 6;
+  const extra = (show14Boundary || show23Boundary || showPurpleBoundary) ? 10 : 6;
   const span=Math.max(12, 6.3*N + extra);
   return Math.min(w,h)/span*zoom;
 }
@@ -711,7 +862,8 @@ function render(){
 
   currentTNorm=+timeSlider.value;
   const tau = BT * currentTNorm;
-  timeReadout.textContent="t = "+currentTNorm.toFixed(3);
+  let axisNames = ["u","x","v","y"];
+  timeReadout.textContent=axisNames[timeCoord] + " = "+currentTNorm.toFixed(3);
 
   const active=[];
   const a4min = needsWideTimeRange() ? 0 : 1;
@@ -740,8 +892,8 @@ function render(){
 
   const a1min = needsWideTimeRange() ? 0 : 1;
   const a1max = needsWideTimeRange() ? N+1 : N;
-  const a23min = (showRedBoundary || showPurpleBoundary) ? 0 : 1;
-  const a23max = (showRedBoundary || showPurpleBoundary) ? N+1 : N;
+  const a23min = (show23Boundary || showPurpleBoundary) ? 0 : 1;
+  const a23max = (show23Boundary || showPurpleBoundary) ? N+1 : N;
 
   for(const layer of active){
     const a4=layer.a4, shape=layer.shape;
@@ -838,8 +990,8 @@ function render(){
   const totalInterior = N**4;
   const shellCount = ((N+2)*(N+2) - N*N) * N*N;          // blue-only shell count, same for red shell
   const purpleCount = showPurpleBoundary ? (((N+2)*(N+2) - N*N) ** 2) : 0; // corner/edge product shell
-  const totalBlueBoundary = showBlueBoundary ? shellCount : 0;
-  const totalRedBoundary = showRedBoundary ? shellCount : 0;
+  const totalBlueBoundary = show14Boundary ? shellCount : 0;
+  const totalRedBoundary = show23Boundary ? shellCount : 0;
   const totalPurpleBoundary = purpleCount;
   const totalCells = totalInterior + totalBlueBoundary + totalRedBoundary + totalPurpleBoundary;
 
@@ -863,6 +1015,7 @@ timeSlider.addEventListener("change",()=>{ if(!sliderDragging) startSnap(); });
 
 resetViewBtn.addEventListener("click",()=>{ yaw=-0.72; pitch=0.54; zoom=1; render(); });
 playBtn.addEventListener("click",()=>{ play(); });
+
 setInterval(()=>{
   if (localStorage.getItem("needUpdate") === "true"){
     localStorage.setItem("needUpdate", "false");
@@ -870,15 +1023,17 @@ setInterval(()=>{
   }
 }, 1000);
 
-blueBoundaryBtn.addEventListener("click", ()=>{
-  showBlueBoundary = !showBlueBoundary;
+markBtn.addEventListener("click", ()=>{ play(true); });
+
+the14BoundaryBtn.addEventListener("click", ()=>{
+  show14Boundary = !show14Boundary;
   cancelSnap();
   updateTimeRange(true);
   updateButtonStates();
   render();
 });
-redBoundaryBtn.addEventListener("click", ()=>{
-  showRedBoundary = !showRedBoundary;
+the23BoundaryBtn.addEventListener("click", ()=>{
+  show23Boundary = !show23Boundary;
   cancelSnap();
   updateButtonStates();
   render();

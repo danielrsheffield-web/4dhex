@@ -180,7 +180,7 @@ body {
         }
         console.log(String(data.btriangleShow) + " " + String(data.rtriangleShow));
         
-
+        writeRenderCells();
       }
 
       function changeSlide(direction){
@@ -398,6 +398,19 @@ body {
       function render4dHexGrid(cells, incOthers = true) {
         if (!cells){return;}
         if (is2d){return;}
+        if (curPlayer === -JSON.parse(localStorage.getItem("curPlayer") || "0")){
+          curPlayer = -curPlayer;
+          if (curPlayer === 1){
+            document.getElementById("player").innerHTML = "Blue";
+            document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+            document.getElementById("sidebar").style.backgroundColor = "#0f72e2";
+          }
+          else {
+            document.getElementById("player").innerHTML = "Red";
+            document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+            document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
+          }
+        }
         localStorage.setItem("storedCells", JSON.stringify(cells));
         storedCells = cells;
         var c = document.getElementById("myCanvas");
@@ -547,42 +560,8 @@ body {
         }
 
         victoryInt = data.victory;
+        writeRenderCells();
       }
-
-      async function mark(coords){
-        for (let i = 0; i < markedCoords.length; i++) {
-            if (markedCoords[i][0] === coords[0] && markedCoords[i][1] === coords[1] && markedCoords[i][2] === coords[2] && markedCoords[i][3] === coords[3]) {
-              markedCoords.splice(i, 1);
-              localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
-              const response = await fetch("/getBoard4d", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
-              });
-            if (!response.ok) {
-            document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
-            return;
-            }
-            const data = await response.json();
-            render4dHexGrid(data.board);
-            return;
-          }
-        }
-        markedCoords.push(coords);
-        localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
-        const response = await fetch("/getBoard4d", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
-              });
-            if (!response.ok) {
-            document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
-            return;
-            }
-            const data = await response.json();
-            render4dHexGrid(data.board);
-            return;
-          }
 
       function Center(coords){
         if (is2d){
@@ -922,6 +901,100 @@ function writeCoords(coords, x, y, ctx){
   }
   ctx.fillText(newCoords.join(","), x, y);
 }
+
+function fourdView() {
+  window.open("/4dview" + "?game_id=" + gameId + "&player=" + 0 + "&botResponse=" + false, "_blank");
+}
+
+function writeRenderCells(){
+        const size = storedCells.length;
+        let renderCells = Array.from({ length: size }, () =>
+          Array.from({ length: size }, () =>
+            Array.from({ length: size }, () => Array(size).fill(0))
+          )
+        );
+        let renderOrder = [0,0,0,0];
+        renderOrder[3] = JSON.parse(localStorage.getItem("timeCoord") || "0");
+        if (renderOrder[3] === 0 || renderOrder[3] === 2){
+          renderOrder[0] = 2 - renderOrder[3];
+          renderOrder[1] = 1;
+          renderOrder[2] = 3;
+        }
+        else {
+          renderOrder[0] = 4 - renderOrder[3];
+          renderOrder[1] = 0;
+          renderOrder[2] = 2;
+        }
+        const lastIndex = storedCells.length - 1;
+        for (let i = 0; i < storedCells.length; i++) {
+          for (let j = 0; j < storedCells[i].length; j++) {
+            for (let k = 0; k < storedCells[i][j].length; k++) {
+              for (let l = 0; l < storedCells[i][j][k].length; l++) {
+                let subCoords = [i,j,k,l];
+                copyCell = storedCells[lastIndex - subCoords[coordOrder[0]]][lastIndex - subCoords[coordOrder[1]]][lastIndex - subCoords[coordOrder[2]]][lastIndex - subCoords[coordOrder[3]]];
+                if (copyCell === 0){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 3;
+                }
+                else if (copyCell === 1){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 0;
+                }
+                else if (copyCell === -1){
+                  renderCells[subCoords[renderOrder[0]]][subCoords[renderOrder[1]]][subCoords[renderOrder[2]]][subCoords[renderOrder[3]]] = 1;
+                }
+              }
+            }
+          }
+        }
+        markedCoords.forEach(coord => {
+          let objectiveCoords = [0,0,0,0];
+          for (let i = 0; i < objectiveCoords.length; i++) {
+            objectiveCoords[coordOrder[i]] = lastIndex - coord[i];
+          }
+          if (renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] === 3){
+            renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] = 2;
+          }
+        });
+        localStorage.setItem("renderCells", JSON.stringify(renderCells));
+        localStorage.setItem("needUpdate", "true");
+        localStorage.setItem("timeCoord", renderOrder[3]);
+      }
+
+      async function mark(coords){
+        for (let i = 0; i < markedCoords.length; i++) {
+            if (markedCoords[i][0] === coords[0] && markedCoords[i][1] === coords[1] && markedCoords[i][2] === coords[2] && markedCoords[i][3] === coords[3]) {
+              markedCoords.splice(i, 1);
+              localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+              const response = await fetch("/getBoard4d", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
+              });
+            if (!response.ok) {
+            document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+            return;
+            }
+            const data = await response.json();
+            render4dHexGrid(data.board);
+            writeRenderCells();
+            return;
+          }
+        }
+        markedCoords.push(coords);
+        localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
+        const response = await fetch("/getBoard4d", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder}),
+              });
+            if (!response.ok) {
+            document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
+            return;
+            }
+            const data = await response.json();
+            render4dHexGrid(data.board);
+            writeRenderCells();
+            return;
+          }
     </script>
   </head>
   <body>
@@ -930,7 +1003,7 @@ function writeCoords(coords, x, y, ctx){
     <span id="error"></span>
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
     <div id="GameInfo"><span id="gameId"></span></div>
-
+    <button onclick="fourdView()">Open 4d View</button>
       <button onclick="clearMarking()">Clear Marking</button>
       <br>
       <button onclick="showEdges(1)">Show Blue Edges</button> 
@@ -945,7 +1018,6 @@ function writeCoords(coords, x, y, ctx){
       <button onclick="newOrder(2)" id="axisButton2">Red Spanning</button>
       <button onclick="newOrder(3)" id="axisButton3">Cross</button>
       <button onclick="toggleCoords()" id="coordsButton">Show Coords</button>
-
       </aside>
 <main class="main-content">
     

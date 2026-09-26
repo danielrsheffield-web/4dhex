@@ -249,6 +249,8 @@ body {
             botMove();
           }
         }
+        localStorage.setItem("markedCoords", JSON.stringify([]));
+        writeRenderCells();
 
     });
 
@@ -343,6 +345,23 @@ body {
 
       function render4dHexGrid(cells, incOthers = true) {
         if (!cells){return;}
+        if (curPlayer === -JSON.parse(localStorage.getItem("curPlayer") || "0")){
+          curPlayer = -curPlayer;
+          if (curPlayer === 1){
+            document.getElementById("player").innerHTML = "Blue";
+            document.getElementById("TurnDisplay").style.backgroundColor = "#0f72e2";
+            if (player === 0){
+              document.getElementById("sidebar").style.backgroundColor = "#0f72e2";
+            }
+          }
+          else {
+            document.getElementById("player").innerHTML = "Red";
+            document.getElementById("TurnDisplay").style.backgroundColor = "#d20d0d";
+            if (player === 0){
+              document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
+            }
+          }
+        }
         localStorage.setItem("storedCells", JSON.stringify(cells));
         storedCells = cells;
         var c = document.getElementById("myCanvas");
@@ -505,9 +524,8 @@ body {
           )
         );
         let renderOrder = [0,0,0,0];
-        renderOrder[3] = coordOrder[0];
-        localStorage.setItem("timeCoord", coordOrder[0]);
-        if (coordOrder[0] === 0 || coordOrder[0] === 2){
+        renderOrder[3] = JSON.parse(localStorage.getItem("timeCoord") || "0");
+        if (renderOrder[3] === 0 || renderOrder[3] === 2){
           renderOrder[0] = 2 - renderOrder[3];
           renderOrder[1] = 1;
           renderOrder[2] = 3;
@@ -538,13 +556,17 @@ body {
           }
         }
         markedCoords.forEach(coord => {
-          let objectiveCoords = [lastIndex - coord[coordOrder[0]],lastIndex - coord[coordOrder[1]],lastIndex - coord[coordOrder[2]],lastIndex - coord[coordOrder[3]]];
+          let objectiveCoords = [0,0,0,0];
+          for (let i = 0; i < objectiveCoords.length; i++) {
+            objectiveCoords[coordOrder[i]] = lastIndex - coord[i];
+          }
           if (renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] === 3){
             renderCells[objectiveCoords[renderOrder[0]]][objectiveCoords[renderOrder[1]]][objectiveCoords[renderOrder[2]]][objectiveCoords[renderOrder[3]]] = 2;
           }
         });
         localStorage.setItem("renderCells", JSON.stringify(renderCells));
         localStorage.setItem("needUpdate", "true");
+        localStorage.setItem("timeCoord", renderOrder[3]);
       }
 
       async function mark(coords){
@@ -919,7 +941,7 @@ function writeCoords(coords, x, y, ctx){
   newCoords = [0, 0, 0, 0]
   canonOrder = [0, 2, 1, 3]
   for (let i = 0; i < coords.length; i++) {
-    newCoords[canonOrder[coordOrder[i]]] = 3 - coords[i];
+    newCoords[canonOrder[coordOrder[i]]] = storedCells.length - coords[i];
   }
   ctx.fillText(newCoords.join(","), x, y);
 }
