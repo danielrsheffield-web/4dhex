@@ -122,10 +122,10 @@
     </div>
     <div id="TurnDisplay"><span id="player"></span>'s Turn</div>
     <div class="bannerButtons">
-        <button id="uBtn" type="button">U</button>
-        <button id="vBtn" type="button">V</button>
-        <button id="xBtn" type="button">X</button>
-        <button id="yBtn" type="button">Y</button>
+        <button id="uBtn" class="toggle" type="button">U</button>
+        <button id="vBtn" class="toggle" type="button">V</button>
+        <button id="xBtn" class="toggle" type="button">X</button>
+        <button id="yBtn" class="toggle" type="button">Y</button>
       </div>
     
     
@@ -137,7 +137,7 @@
     <section id="coordPanel" aria-labelledby="coordPanelTitle">
       <h2 id="coordPanelTitle">Coordinates</h2>
       <div class="coordRow">
-        <label for="coordSlider1">a1</label>
+        <label for="coordSlider1"><div id="axisLabel1">a1</div></label>
         <div>
           <input id="coordSlider1" class="coordSlider" type="range" min="1" max="1" step="1" value="1">
           <div class="coordMarks" aria-hidden="true"></div>
@@ -145,7 +145,7 @@
         <output class="coordReadout" for="coordSlider1">1</output>
       </div>
       <div class="coordRow">
-        <label for="coordSlider2">a2</label>
+        <label for="coordSlider2"><div id="axisLabel2">a2</div></label>
         <div>
           <input id="coordSlider2" class="coordSlider" type="range" min="1" max="1" step="1" value="1">
           <div class="coordMarks" aria-hidden="true"></div>
@@ -153,7 +153,7 @@
         <output class="coordReadout" for="coordSlider2">1</output>
       </div>
       <div class="coordRow">
-        <label for="coordSlider3">a3</label>
+        <label for="coordSlider3"><div id="axisLabel3">a3</div></label>
         <div>
           <input id="coordSlider3" class="coordSlider" type="range" min="1" max="1" step="1" value="1">
           <div class="coordMarks" aria-hidden="true"></div>
@@ -454,6 +454,7 @@ uBtn.addEventListener("click", ()=>{
  localStorage.setItem("timeCoord", 0);
  writeRenderCells();
  render();
+ updateButtonStates();
 });
 xBtn.addEventListener("click", ()=>{
 let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
@@ -463,6 +464,7 @@ let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
  localStorage.setItem("timeCoord", 1);
  writeRenderCells();
  render();
+ updateButtonStates();
 });
 vBtn.addEventListener("click", ()=>{
  let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
@@ -472,7 +474,7 @@ vBtn.addEventListener("click", ()=>{
  localStorage.setItem("timeCoord", 2);
  writeRenderCells();
  render();
-
+ updateButtonStates();
 });
 yBtn.addEventListener("click", ()=>{
  let timeCoord = JSON.parse(localStorage.getItem("timeCoord") || "0");
@@ -482,6 +484,7 @@ yBtn.addEventListener("click", ()=>{
  localStorage.setItem("timeCoord", 3);
  writeRenderCells();
  render();
+ updateButtonStates();
 });
 
 
@@ -553,6 +556,26 @@ function updateButtonStates(){
   the23BoundaryBtn.textContent = timeCoord === 1 || timeCoord === 3 ? (show23Boundary ? "Hide blue boundary" : "Show blue boundary") : (show23Boundary ? "Hide red boundary" : "Show red boundary");
   purpleBoundaryBtn.classList.toggle("active", showPurpleBoundary);
   purpleBoundaryBtn.textContent = showPurpleBoundary ? "Hide red-and-blue boundary" : "Show red-and-blue boundary";
+  let axisNames = ["u", "x", "v", "y"];
+  let renderOrder = [0,0,0,0];
+        renderOrder[3] = JSON.parse(localStorage.getItem("timeCoord") || "0");
+        if (renderOrder[3] === 0 || renderOrder[3] === 2){
+          renderOrder[0] = 2 - renderOrder[3];
+          renderOrder[1] = 1;
+          renderOrder[2] = 3;
+        }
+        else {
+          renderOrder[0] = 4 - renderOrder[3];
+          renderOrder[1] = 0;
+          renderOrder[2] = 2;
+        }
+    document.getElementById("axisLabel1").innerHTML = axisNames[renderOrder[0]];
+    document.getElementById("axisLabel2").innerHTML = axisNames[renderOrder[1]];
+    document.getElementById("axisLabel3").innerHTML = axisNames[renderOrder[2]];
+    uBtn.classList.toggle("active", timeCoord === 0);
+    xBtn.classList.toggle("active", timeCoord === 1);
+    vBtn.classList.toggle("active", timeCoord === 2);
+    yBtn.classList.toggle("active", timeCoord === 3);
 }
 function needsWideTimeRange(){
   return show14Boundary || showPurpleBoundary;
@@ -975,10 +998,23 @@ function render(){
   }
 
   const axisOrigin=[52,h-54], axisLen=28;
+  let axisLabels = ["u","x","v","y"];
+  let renderOrder = [0,0,0,0];
+        renderOrder[3] = JSON.parse(localStorage.getItem("timeCoord") || "0");
+        if (renderOrder[3] === 0 || renderOrder[3] === 2){
+          renderOrder[0] = 2 - renderOrder[3];
+          renderOrder[1] = 1;
+          renderOrder[2] = 3;
+        }
+        else {
+          renderOrder[0] = 4 - renderOrder[3];
+          renderOrder[1] = 0;
+          renderOrder[2] = 2;
+        }
   const axes=[
-    {v:rotatePoint([1,0,0]),label:"x"},
-    {v:rotatePoint([0,1,0]),label:"y"},
-    {v:rotatePoint([0,0,1]),label:"z"}
+    {v:rotatePoint([1,0,0]),label:axisLabels[renderOrder[0]]},
+    {v:rotatePoint([0,1,0]),label:axisLabels[renderOrder[1]]},
+    {v:rotatePoint([0,0,1]),label:axisLabels[renderOrder[2]]},
   ];
   ctx.font="11px system-ui"; ctx.fillStyle="#cad5e6"; ctx.strokeStyle="#cad5e6"; ctx.lineWidth=1.3;
   for(const a of axes){
