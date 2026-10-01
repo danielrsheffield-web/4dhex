@@ -187,4 +187,16 @@ To keep track of things, you can right click a hex to mark it. Marked hexes pers
 False
 False
 False
+The "Open 4d View" button opens an alternate view on another tab. Here a 3d slice of the board will be shown, with a slider at the top that allows moving between slices. The U, V, X, and Y buttons at the top allow you to select which coordinate is controlled by the slider.
+{{23}}
+4d
+False
+False
+False
+The three sliders in the bottom left corner control the position of the green cursor, which can be used to mark hexes or make plays.
+{{24}}
+4d
+False
+False
+False
 Good luck!
