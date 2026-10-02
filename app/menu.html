@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>4d Hex</title>
     <style>
     :root {
@@ -12,105 +13,128 @@
   --menu-red: #d20d0d;
   --menu-radius: 6px;
 }
-     #container
-{
-  height: 1000px;
-  position: relative;
-  width: 1700px;
+* {
+  box-sizing: border-box;
 }
-#myCanvas
-{
+html, body {
+  margin: 0;
+  width: 100%;
+}
+#container {
+  height: 100vh;
+  height: 100dvh;
+  position: relative;
+  width: 100%;
+  padding: clamp(12px, 2vw, 24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+#myCanvas {
+  position: absolute;
+  inset: 0;
+  display: block;
   height: 100%;
   width: 100%;
-  max-height: 100%;
-  max-width: 100%;
 }
 #overlay {
-  bottom: 300px;
-  left: 690px;
-  position: absolute;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;           
-  width: 320px;
+  gap: 8px;
+  width: min(320px, 100%);
+  max-height: 100%;
   align-items: center;
+  overflow-y: auto;
 }
 #controls {
   display: flex;
   flex-direction: column;
-  gap: 8px;           
-  width: 200px;       
+  flex-shrink: 0;
+  gap: 8px;
+  width: min(220px, 100%);
+}
+#size-buttons {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 8px;
 }
 #playerPanel {
-  bottom: 400px;
-  left: 600px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   position: absolute;
   display: flex;
-  flex-direction: row;
-  gap: 8px;           
-  width: 500px;
-  height: 120 px;    
+  gap: clamp(4px, 1vw, 8px);
+  width: min(500px, calc(100% - 24px));
+  padding: 8px;
   align-items: center;
   visibility: hidden;
   background-color: #fff;
-    border-radius: 6px;
-    border: 2px solid #222;
-    color: #000
+  border-radius: 6px;
+  border: 2px solid #222;
+  color: #000;
 }
-.playerPanel-btn {
-  width: 100%;
-  margin-bottom: 8px;
-  margin-left: 8px;
-  margin-right: 8px;
-  margin-top: 8px;
+.playerPanel-btn, .main-btn, .size-btn {
+  min-width: 0;
+  min-height: 40px;
   padding: 8px;
   cursor: pointer;
   border-radius: 6px;
   border: 2px solid #222;
   background-color: #e8e8e8;
   color: #222;
+  white-space: nowrap;
 }
-.main-btn {
-    width: 100%;
-    margin-bottom: 8px;
-    padding: 8px;
-    cursor: pointer;
-    border-radius: 6px;
-    border: 2px solid #222;
-    background-color: #e8e8e8;
-    color: #222;
-    font-size: 16px;
-    font-weight: bold;
+.playerPanel-btn {
+  flex: 1;
+  padding-inline: clamp(2px, 1vw, 8px);
+  font-size: clamp(11px, 3.3vw, 14px);
 }
-.size-btn {
-    width: 28.5%;
-    padding: 8px;
-    cursor: pointer;
-    border-radius: 6px;
-    border: 2px solid #222;
-    background-color: #e8e8e8;
-    color: #222;
-    font-size: 16px;
-    font-weight: bold;
-    margin-bottom: 8px;
-    margin-right: 7px;
+.main-btn, .size-btn {
+  width: 100%;
+  font-size: 16px;
+  font-weight: bold;
 }
 #title {
-    width: 320px;
-    height: 100px;
-    font-size: 96px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 16px;
-    background-color: #fff;
-    border-radius: 6px;
-    border: 2px solid #222;
-    color: #000
-
+  flex-shrink: 0;
+  width: 100%;
+  padding: 4px 8px;
+  font-size: clamp(40px, 10vw, 80px);
+  line-height: 1.1;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 2px solid #222;
+  color: #000;
+}
+#controls form, #game-id-input {
+  width: 100%;
+  min-width: 0;
+}
+#game-id-input {
+  padding: 8px;
+  font-size: 16px;
+}
+@media (max-height: 500px) {
+  #overlay, #controls {
+    gap: 4px;
+  }
+  #title {
+    font-size: clamp(32px, 10vh, 48px);
+  }
+  .main-btn, .size-btn {
+    min-height: 32px;
+    padding-block: 4px;
+  }
 }
     </style>
     <script>
-        const hexSize = 50;
+        let hexSize = 50;
         let size = 3;
         let botResponse = false;
         let game_id = "";
@@ -290,8 +314,25 @@
         ctx.stroke();
       }
 
-      document.addEventListener("DOMContentLoaded", () => {
+      function resizeCanvas() {
+        const canvas = document.getElementById("myCanvas");
+        const bounds = canvas.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.round(bounds.width));
+        canvas.height = Math.max(1, Math.round(bounds.height));
+        const padding = Math.min(24, Math.min(canvas.width, canvas.height) * 0.05);
+        // The size-4 board, including its colored edges, spans these hex-size units.
+        const boardWidth = 2 * 4 * (4 + 1.5) * 0.75;
+        const boardHeight = 2 * (4 + 0.5) * (4 + 1) * 0.43;
+        hexSize = Math.min(
+          (canvas.width - 2 * padding) / boardWidth,
+          (canvas.height - 2 * padding) / boardHeight
+        );
         render4dHexGrid();
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        resizeCanvas();
+        new ResizeObserver(resizeCanvas).observe(document.getElementById("container"));
         document.getElementById("size-btn-3").style.backgroundColor = "#ccc";
     });
 
@@ -360,7 +401,7 @@
   </head>
   <body>
       <div id = "container">
-        <canvas id="myCanvas" width="1700" height="1000"></canvas>
+        <canvas id="myCanvas"></canvas>
         <div id = "overlay">
             <div id = "title">
                 4d Hex
@@ -370,6 +411,7 @@
             <button class="size-btn" onclick="setSize(2)" id = "size-btn-2">2</button>
             <button class="size-btn" onclick="setSize(3)" id = "size-btn-3">3</button>
             <button class="size-btn" onclick="setSize(4)" id = "size-btn-4">4</button>
+            <button class="size-btn" onclick="setSize(5)" id = "size-btn-5">5</button>
         </div>
             <button class="main-btn" onclick="startTutorial()">Tutorial</button>
             <button class="main-btn" onclick="localGame()">Local Game</button>
@@ -377,7 +419,7 @@
             <button class="main-btn" onclick="onlineGame()">Host Game</button>
             <button class="main-btn" onclick="startJoin()">Join Game</button>
             <form onsubmit="joinGame(0, event)">
-                <input style="visibility: hidden;" type="text" name="game_id" placeholder="Game Code" id = "game-id-input" style="font-size: 16px;" onkeydown="if(event.key === 'Enter'){joinGame(0, event)}">
+                <input style="visibility: hidden;" type="text" name="game_id" placeholder="Game Code" id = "game-id-input" onkeydown="if(event.key === 'Enter'){joinGame(0, event)}">
             </form>
         </div>
         </div>

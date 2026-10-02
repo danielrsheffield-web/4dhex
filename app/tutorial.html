@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>Hex Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * {
   box-sizing: border-box;
@@ -12,7 +13,8 @@ body {
 }
 .page {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
 }
 .sidebar {
   width: 260px;           /* fixed sidebar width */
@@ -25,8 +27,9 @@ body {
 }
 .main-content {
   flex: 1;                /* take remaining space */
-  padding: 16px;
-  overflow: auto;         /* scroll board area if needed */
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(8px, 2vw, 16px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -53,41 +56,93 @@ body {
   margin-bottom: 8px;
   padding: 8px;
   cursor: pointer;
+  white-space: nowrap;
 }
 #TurnDisplay {
-    width: 200px;
-    height: 30px;
+    width: 100%;
     font-size: 24px;
     font-weight: bold;
     text-align: center;
     margin-bottom: 8px;
     border-radius: 6px;
     border: 2px solid #222;
-    color: #000
+    color: #000;
     background-color: #0f72e2;
+    white-space: nowrap;
 
 }
 .changeSlide {
-  font-size: 24px;
+  flex: 0 1 150px;
+  min-width: 0;
+  font-size: clamp(16px, 4vw, 24px);
   font-weight: bold;
   text-align: center;
-  margin-bottom: 8px;
   border-radius: 6px;
   border: 2px solid #222;
-  color: #000
+  color: #000;
   height: 40px;
-  width: 150px;
+  white-space: nowrap;
+}
+.slide-controls {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+#boardWrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+#myCanvas {
+  position: absolute;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 #slideText {
-    height: 400px;
-    width: 1000px;
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 28%;
     font-size: 16px;
     overflow-y: auto;
     border-radius: 6px;
     border: 2px solid #222;
-    color: #000
+    color: #000;
     background-color: #fff;
     padding: 10px;
+}
+@media (max-width: 700px) {
+  .page {
+    flex-direction: column;
+  }
+  .sidebar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 0;
+    padding: 8px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid #333;
+  }
+  .sidebar button,
+  .sidebar input[type="submit"],
+  .sidebar div {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+  }
+  #TurnDisplay {
+    width: auto;
+    margin: 0;
+    padding: 0 8px;
+  }
+  .sidebar br {
+    display: none;
+  }
 }
     </style>
     <script>
@@ -105,9 +160,46 @@ body {
       let is2d = false;
       let manCoords = false;
       let victoryInt = 0;
+      let storedCells = [];
+      let slideRequest = 0;
+
+      function resizeCanvas() {
+        const canvas = document.getElementById("myCanvas");
+        const wrapper = document.getElementById("boardWrapper");
+        const width = Math.max(1, Math.floor(wrapper.clientWidth));
+        const height = Math.max(1, Math.floor(wrapper.clientHeight));
+        if (canvas.width !== width) canvas.width = width;
+        if (canvas.height !== height) canvas.height = height;
+        const boardWidth = is2d ? 20.25: 1.5 * boardSize * (boardSize + 1.5);
+        const boardHeight = is2d ? 12.04: .86 * (boardSize + .5) * (boardSize + 1);
+        hexSize = Math.min(Math.max(1, width - 32) / boardWidth, Math.max(1, height - 32) / boardHeight);
+        centerX = width / 2;
+        centerY = height / 2;
+        localStorage.setItem("currentHex", "[]");
+        redrawBoard();
+      }
+
+      function redrawBoard() {
+        if (!storedCells.length) return;
+        if (!is2d) {
+          render4dHexGrid(storedCells);
+          return;
+        }
+        const canvas = document.getElementById("myCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "black";
+        render2dHexGrid(storedCells[0][0], centerX, centerY, ctx, [1, 1, 1, -1]);
+        renderMarkings(ctx);
+        renderTriangles();
+        renderEdges();
+        if (victoryInt !== 0) victory(victoryInt);
+      }
 
       async function displaySlide(slide){
-        clearEdges();
+        const requestId = ++slideRequest;
+        localStorage.setItem("edges", "[]");
+        localStorage.setItem("triangles", "[]");
 
         if (slide === 24){
           document.getElementById("nextButton").innerHTML = "End";
@@ -116,7 +208,8 @@ body {
           document.getElementById("previousButton").style.display = "none";
         }
         else if (slide === 25){
-            window.location.href = "/"
+            window.location.href = "/";
+            return;
         }
         else {
           document.getElementById("previousButton").style.display = "inline";
@@ -124,13 +217,13 @@ body {
           document.getElementById("nextButton").innerHTML = "Next";
         }
         
-        clearMarking();
         const response = await fetch("/readTutorial", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: gameId, slide: slide, coordOrder: coordOrder }),
         });
         const data = await response.json();
+        if (requestId !== slideRequest) return;
 
         document.getElementById("slideText").innerHTML = data.text;
         document.getElementById("slideText").style.display = "block";
@@ -138,6 +231,8 @@ body {
         boardSize = data.size;
         is2d = data.is2d;
         victoryInt = data.victory;
+        storedCells = data.board;
+        localStorage.setItem("storedCells", JSON.stringify(storedCells));
         markedCoords = data.marked;
         localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
 
@@ -145,25 +240,15 @@ body {
             toggleCoords();
         }
 
-        if (data.is2d){
-            c = document.getElementById("myCanvas");
-            ctx = c.getContext("2d");
-            centerX = c.width / 2;
-            centerY = c.height / 2;
-            ctx.clearRect(0, 0, c.width, c.height);
-            render2dHexGrid(data.board[0][0], centerX, centerY, ctx, [1, 1, 1, -1]);
-        }
-        else {
-            render4dHexGrid(data.board);
-        }
+          resizeCanvas();
 
         if (data.changeOrder){
-            newOrder(data.coordShift);
+            await newOrder(data.coordShift);
+            if (requestId !== slideRequest) return;
         }
         
         
         
-        localStorage.setItem("storedCells", JSON.stringify(data.board));
         document.getElementById("player").innerHTML = data.player === 1 ? "Blue" : "Red";
         document.getElementById("TurnDisplay").style.backgroundColor = curPlayer === 1 ? "#0f72e2" : "#d20d0d";
         document.getElementById("sidebar").style.backgroundColor = curPlayer === 1 ? "#0f72e2" : "#d20d0d";
@@ -287,11 +372,12 @@ body {
 
     function handleMouseDown(e){
       e.preventDefault();
+      if (!storedCells.length) return;
       const canvas = document.getElementById("myCanvas");
       const ctx = canvas.getContext("2d");
       const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      const mouseX = (e.clientX - rect.left) * canvas.width / rect.width;
+      const mouseY = (e.clientY - rect.top) * canvas.height / rect.height;
       if (is2d){
         coords = findHex2d(mouseX, mouseY, centerX, centerY, ctx);
         if (coords.length === 0) {return;}
@@ -314,14 +400,15 @@ body {
 
     function handleMouseMove(e){
         e.preventDefault();
+        if (!storedCells.length || is2d) return;
 
         currentHex = JSON.parse(localStorage.getItem("currentHex") || "[]");
 
         const canvas = document.getElementById("myCanvas");
         const ctx = canvas.getContext("2d");
         const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+        const mouseX = (e.clientX - rect.left) * canvas.width / rect.width;
+        const mouseY = (e.clientY - rect.top) * canvas.height / rect.height;
 
 
         if (currentHex.length !== 0){
@@ -357,14 +444,17 @@ body {
 
     // listen for mousedown events
     document.addEventListener("DOMContentLoaded", () => {
-        clearMarking();
-        clearEdges();
+        markedCoords = [];
+        localStorage.setItem("markedCoords", "[]");
+        localStorage.setItem("currentHex", "[]");
         document.getElementById("player").innerHTML = "Blue";
         curPlayer = 1;
         localStorage.setItem("curPlayer", curPlayer);
         const sidebar = document.querySelector(".sidebar");
         sidebar.style.setProperty("background-color", "#0f72e2");
         slide = 0;
+        resizeCanvas();
+        new ResizeObserver(resizeCanvas).observe(document.getElementById("boardWrapper"));
         displaySlide(slide);
         document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
@@ -480,6 +570,17 @@ body {
           }
         }
 
+        renderMarkings(ctx);
+        if (incOthers){
+          renderTriangles();
+          renderEdges();
+        }
+        if (victoryInt !== 0) {
+          victory(victoryInt);
+        }
+    }
+
+      function renderMarkings(ctx) {
         markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
         markedCoords.forEach(coord => {
           center = Center(coord);
@@ -502,14 +603,7 @@ body {
             }
           }  
         });
-        if (incOthers){
-          renderTriangles();
-          renderEdges();
-        }
-        if (victoryInt !== 0) {
-          victory(victoryInt);
-        }
-    }
+      }
 
       async function playAt(coords) {
         if (marking){
@@ -537,11 +631,11 @@ body {
         }
 
         const data = await response.json();
+        storedCells = data.cells;
+        victoryInt = data.victory;
         if (is2d){
-          c = document.getElementById("myCanvas");
-          ctx = c.getContext("2d");
           localStorage.setItem("storedCells", JSON.stringify(data.cells));
-          render2dHexGrid(data.cells[0][0], centerX, centerY, ctx, [1, 1, 1, -1]);
+          redrawBoard();
         }
         else {
           render4dHexGrid(data.cells);
@@ -559,7 +653,6 @@ body {
           document.getElementById("sidebar").style.backgroundColor = "#d20d0d";
         }
 
-        victoryInt = data.victory;
         writeRenderCells();
       }
 
@@ -652,14 +745,7 @@ body {
         localStorage.setItem("edges", JSON.stringify([]));
         localStorage.setItem("triangles", JSON.stringify([]));
         storedCells = JSON.parse(localStorage.getItem("storedCells") || "[]");
-        if (is2d){
-          c = document.getElementById("myCanvas");
-          ctx = c.getContext("2d");
-          render2dHexGrid(storedCells[0][0], centerX, centerY, ctx, [1, 1, 1, -1]);
-        }
-        else {
-          render4dHexGrid(storedCells);
-        }
+        redrawBoard();
       }
 
       function adjInit(coords) {
@@ -784,18 +870,7 @@ function toggleMarking() {
 async function clearMarking() {
   markedCoords = [];
   localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
-  const response = await fetch("/getBoard4d", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: gameId, coordOrder: coordOrder }),
-    });
-    if (!response.ok) {
-      document.getElementById("hexGrid").innerHTML = "Server error: " + response.status;
-      return;
-    }
-    const data = await response.json();
-    render4dHexGrid(data.board);
-  return;
+  redrawBoard();
 }
 
 async function newOrder(choice){
@@ -846,28 +921,28 @@ async function newOrder(choice){
     }
     markedCoords = newMarkedCoords;
     localStorage.setItem("markedCoords", JSON.stringify(markedCoords));
-    if (is2d){
-      render2dHexGrid(data.board[0][0], centerX, centerY, ctx, [1, 1, 1, -1]);
-    }
-    else {
-        render4dHexGrid(data.board);
-    }
+    storedCells = data.board;
+    localStorage.setItem("storedCells", JSON.stringify(storedCells));
+    redrawBoard();
 }
 
 function victory(player){
   c = document.getElementById("myCanvas");
   ctx = c.getContext("2d");
+  const bannerScale = Math.min(1, c.width / 400, c.height / 140);
+  const bannerWidth = 400 * bannerScale;
+  const bannerHeight = 70 * bannerScale;
   ctx.fillStyle = player === 1 ? "blue" : "red";
-  ctx.fillRect(0, 0, 400, 70);
-  ctx.font = "50px Arial";
+  ctx.fillRect(0, 0, bannerWidth, bannerHeight);
+  ctx.font = `${50 * bannerScale}px Arial`;
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (player === 1){
-    ctx.fillText("Blue has won!", 200, 35);
+    ctx.fillText("Blue has won!", bannerWidth / 2, bannerHeight / 2);
   }
   else {
-    ctx.fillText("Red has won!", 200, 35);
+    ctx.fillText("Red has won!", bannerWidth / 2, bannerHeight / 2);
   }
 }
 
@@ -879,18 +954,16 @@ function toggleCoords() {
   else {
     document.getElementById("coordsButton").innerHTML = "Show Coords";
   }
-  if (!is2d){
-    render4dHexGrid(storedCells);
-  }
+  redrawBoard();
 }
 
 function writeCoords(coords, x, y, ctx){
   ctx.fillStyle = "black";
-  ctx.font = "12px Arial";
+  ctx.font = `${Math.min(12, hexSize * (is2d ? .22 : .16))}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (is2d){
-    newCoords = [3 - coords[0], 3 - coords[1]];
+    newCoords = coords.slice(-2).map(coord => 3 - coord);
     ctx.fillText(newCoords.join(","), x, y);
     return;
   }
@@ -1022,11 +1095,11 @@ function writeRenderCells(){
 <main class="main-content">
     
 
-    <div id="boardWrapper" style="position: relative;">
-        <canvas id="myCanvas" width="1200" height="600"></canvas>
+    <div id="boardWrapper">
+        <canvas id="myCanvas"></canvas>
         <svg id="edgeLayer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></svg>
       </div>
-    <div><button onclick="changeSlide(-1)" class="changeSlide" id="previousButton">Previous</button> <button onclick="changeSlide(1)" class="changeSlide" id="nextButton">Next</button></div>
+    <div class="slide-controls"><button onclick="changeSlide(-1)" class="changeSlide" id="previousButton">Previous</button> <button onclick="changeSlide(1)" class="changeSlide" id="nextButton">Next</button></div>
     <div id="slideText"></div>
   
   
