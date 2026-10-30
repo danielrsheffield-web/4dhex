@@ -146,22 +146,34 @@ body {
 }
     </style>
     <script>
-      let gameId = new URLSearchParams(window.location.search).get("game_id");
-      let coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
-      let markedCoords = JSON.parse(localStorage.getItem("markedCoords") || "[]");
-      let marking = JSON.parse(localStorage.getItem("marking") || "false");
-      let curPlayer = 0;
-      let boardSize = 3
-      let hexSize = 50;
-      let centerX = 0;
-      let centerY = 0;
-      let checking = false;
-      let slide = 0;
-      let is2d = false;
-      let manCoords = false;
-      let victoryInt = 0;
-      let storedCells = [];
-      let slideRequest = 0;
+      let gameId = null;
+      
+      async function init() {
+      gameId = new URLSearchParams(window.location.search).get("game_id");
+      if (gameId === null) {
+        await getId();
+      }
+      coordOrder = JSON.parse(localStorage.getItem("coordOrder") || "[0,1,2,3]");
+      marking = JSON.parse(localStorage.getItem("marking") || "false");
+      curPlayer = 0;
+      boardSize = 3
+      hexSize = 50;
+      centerX = 0;
+      centerY = 0;
+      checking = false;
+      slide = 0;
+      is2d = false;
+      manCoords = false;
+      victoryInt = 0;
+      storedCells = [];
+      slideRequest = 0;
+    }
+
+      async function getId() {
+        const response = await fetch("/getId");
+        const data = await response.json();
+        gameId = data.user_id;
+      }
 
       function resizeCanvas() {
         const canvas = document.getElementById("myCanvas");
@@ -443,8 +455,8 @@ body {
     }
 
     // listen for mousedown events
-    document.addEventListener("DOMContentLoaded", () => {
-        markedCoords = [];
+    document.addEventListener("DOMContentLoaded", async () => {
+        await init();
         localStorage.setItem("markedCoords", "[]");
         localStorage.setItem("currentHex", "[]");
         document.getElementById("player").innerHTML = "Blue";
@@ -453,9 +465,8 @@ body {
         const sidebar = document.querySelector(".sidebar");
         sidebar.style.setProperty("background-color", "#0f72e2");
         slide = 0;
-        resizeCanvas();
         new ResizeObserver(resizeCanvas).observe(document.getElementById("boardWrapper"));
-        displaySlide(slide);
+        await displaySlide(slide);
         document.getElementById("myCanvas").addEventListener("mousedown", handleMouseDown);
         document.getElementById("myCanvas").addEventListener("mousemove", handleMouseMove);
         document.getElementById("myCanvas").addEventListener("contextmenu", handleContextMenu);
